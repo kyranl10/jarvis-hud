@@ -1,8 +1,8 @@
 {
- "updated": 1792081163454,
- "matched": 544,
+ "updated": 1792102110645,
+ "matched": 549,
  "counts": {
-  "new": 58,
+  "new": 63,
   "progress": 1,
   "applied": 2,
   "interview": 1,
@@ -20,19 +20,19 @@
  ],
  "fresh": [
   {
-   "company": "MetLife",
-   "title": "METx D&A Intern",
-   "posted": 1792076432000
+   "company": "CBI Bank & Trust",
+   "title": "Enterprise Data & Analytics Intern Summer 2027",
+   "posted": 1792101337000
   },
   {
-   "company": "FedEx",
-   "title": "Analytics Intern (Summer 2027)",
-   "posted": 1792041343000
+   "company": "WebstaurantStore",
+   "title": "Data Science Summer Intern",
+   "posted": 1792087562000
   },
   {
-   "company": "AGCO",
-   "title": "Business Intelligence Intern",
-   "posted": 1792017239000
+   "company": "Nissan Motor Corporation",
+   "title": "Data Science Intern - Summer 2027 - Franklin, TN",
+   "posted": 1792087562000
   }
  ]
 }
