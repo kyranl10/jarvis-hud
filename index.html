@@ -658,6 +658,17 @@ if ("speechSynthesis" in window) speechSynthesis.getVoices();
 tick(); setInterval(tick, 10000);
 load(); setInterval(load, 15 * 60000);
 loadMail(); setInterval(loadMail, 15 * 60000);
+// Live updates: ntfy pushes each new post the moment it lands, so pages don't wait for the 15-minute poll
+function live(t, fn) {
+  if (!/^[A-Za-z0-9_-]+$/.test(t) || !window.EventSource) return;
+  new EventSource(`https://ntfy.sh/${t}/sse`).onmessage = (e) => { try { if (JSON.parse(e.data).event === "message") fn(); } catch (err) {} };
+}
+if (/^[A-Za-z0-9_-]+$/.test(location.hash.slice(1))) {
+  const base = location.hash.slice(1).replace(/-hud$/, "");
+  live(base + "-hud", load); live(base + "-mail", loadMail); live(base + "-jobs", loadJobsAge);
+}
+// Coming back to the tab catches up at once
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { load(); loadMail(); loadIntern(); } });
 // Sync asks the backend for a fresh run (it watches the "-sync" side topic), then reloads once new data lands
 $("sync").addEventListener("click", async () => {
   const b = $("sync"), topic = location.hash.slice(1), done = (t) => {
