@@ -1,8 +1,8 @@
 {
- "updated": 1792036252104,
- "matched": 520,
+ "updated": 1792037385590,
+ "matched": 536,
  "counts": {
-  "new": 46,
+  "new": 62,
   "progress": 1,
   "applied": 2,
   "interview": 1,
@@ -20,19 +20,19 @@
  ],
  "fresh": [
   {
-   "company": "Phillips 66",
-   "title": "University Intern - ERI Analytical Solutions",
-   "posted": 1791941067000
+   "company": "AGCO",
+   "title": "Business Intelligence Intern",
+   "posted": 1792017239000
   },
   {
-   "company": "Assurant",
-   "title": "Data Support Analyst Intern",
-   "posted": 1791936000000
+   "company": "National Life",
+   "title": "Data Science Intern",
+   "posted": 1792016953000
   },
   {
-   "company": "Vertiv",
-   "title": "Data Analytics Intern",
-   "posted": 1791900365000
+   "company": "AECOM",
+   "title": "Engineering/Data Analytics Intern",
+   "posted": 1792016261000
   }
  ]
 }
