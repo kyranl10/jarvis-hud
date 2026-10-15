@@ -526,7 +526,7 @@ async function load() {
 }
 
 // Health strip: when each source last updated, red once it's later than its schedule allows
-const health = { src: {}, names: [], refresh: 0, triage: 0, intern: 0 };
+const health = { src: {}, names: [], refresh: 0, triage: 0, intern: 0, jobs: 0 };
 const SOURCE_NAMES = { calendar: "Calendar", work: "Work", canvas: "Canvas", band: "Band", gmail: "Gmail", discord: "PMA",
   weather: "Weather", sports: "Scores", instagram: "Instagram", mail: "Mail data" };
 function showHealth() {
@@ -537,6 +537,8 @@ function showHealth() {
   // Mail triage runs every 2 hours from 8 AM to 10 PM; the internship scan every 6 hours
   if (health.triage) items.push(["Triage", health.triage, (h >= 9 && h < 23 ? 3 * 60 : 11 * 60) * min]);
   if (health.intern) items.push(["Internships", health.intern, 7 * 60 * min]);
+  // Application statuses: written by the hourly status sync, then relayed through the private feed
+  if (health.jobs) items.push(["Statuses", health.jobs, 90 * min]);
   const when = (t) => !t ? "over a day ago" : now - t < 20 * 3600e3 ? clock(new Date(t).toISOString()) : dayName(new Date(t).toISOString());
   const stale = items.filter(([, t, max]) => now - t > max);
   $("health").hidden = false;
@@ -576,12 +578,22 @@ async function loadMail() {
 
 // Counts only, written by the internship scan every 6 hours. No resume or application details live here.
 const NEWS = { applied: "Application received", interview: "Interview news", offer: "Offer news", rejected: "Application closed" };
+async function loadJobsAge() {
+  const topic = location.hash.slice(1);
+  if (!/^[A-Za-z0-9_-]+$/.test(topic)) return;
+  try {
+    const res = await fetch(`https://ntfy.sh/${topic.replace(/-hud$/, "")}-jobs/json?poll=1&since=24h`, { cache: "no-store" });
+    const msgs = (await res.text()).trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((m) => m.event === "message");
+    if (msgs.length) { health.jobs = JSON.parse(msgs[msgs.length - 1].message).updated || 0; showHealth(); }
+  } catch (e) {}
+}
 async function loadIntern() {
   try {
     const res = await fetch("intern.json", { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
     const d = await res.json(), c = d.counts || {};
     health.intern = d.updated || 0; showHealth();
+    loadJobsAge();
     $("intern-scan").textContent = `${d.matched ?? 0} matches · scanned ${dayName(d.updated).toLowerCase()} ${clock(d.updated)}`;
     $("intern-stats").innerHTML = [["To review", c.new], ["In progress", c.progress], ["Applied", c.applied], ["Interviews", c.interview]]
       .map(([k, v]) => `<div><b>${esc(v ?? 0)}</b><i>${esc(k)}</i></div>`).join("");
