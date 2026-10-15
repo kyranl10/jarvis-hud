@@ -105,10 +105,13 @@ textarea { width: 100%; min-height: 70px; font: 15px var(--display); color: var(
   justify-self: start; border: 1px solid var(--line); padding: 8px 14px; margin-bottom: 6px; }
 .back:hover { color: var(--arc); }
 a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc); }
-.why { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.4; }
+.gist { margin: 0; font-size: 17px; line-height: 1.45; max-width: 65ch; }
+.why { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.4; }
+.why b { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; color: var(--arc-dim); margin-right: 4px; }
 .lvl { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; padding: 1px 7px; border: 1px solid currentColor; text-transform: uppercase; }
 .lvl.act { color: var(--alert); } .lvl.fyi { color: var(--arc); }
 .plan { border-left: 2px solid var(--arc); padding-left: 12px; display: grid; gap: 6px; }
+.plan summary { cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--arc); }
 .plan b { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--arc-dim); font-weight: 500; }
 .plan p { margin: 0; font-size: 16px; line-height: 1.4; }
 .plan ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 16px; line-height: 1.35; }
@@ -135,7 +138,7 @@ a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc);
     <button class="tab" role="tab" data-tab="gone" aria-selected="false">Dismissed<span class="n" id="n-gone"></span></button>
   </nav>
   <section class="list" id="list" aria-live="polite"><p class="empty">Loading your mail…</p></section>
-  <p class="foot">The full email, Approve, Deny and your own instructions open your private Claude page</p>
+  <p class="foot">Plans, Approve, Deny and your own instructions open your private Claude page</p>
 </main>
 <script>
 // Read-only list of what Jarvis flagged, from the same private feed as the HUD's Messages panel.
@@ -156,20 +159,22 @@ for (const b of document.querySelectorAll(".tab")) {
   b.onclick = () => { tab = b.dataset.tab; for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t === b)); render(); };
 }
 
+// Each card leads with what the email says; a plan is only made when you ask for one on the Claude page
 function card(m) {
-  const gmail = safeUrl(m.url), plan = CLAUDE + (m.id ? "#" + encodeURIComponent(m.id) : "");
+  const gmail = safeUrl(m.url), page = CLAUDE + (m.id ? "#" + encodeURIComponent(m.id) : "");
+  const ask = CLAUDE + (m.id ? "#plan:" + encodeURIComponent(m.id) : "");
   return `<article class="job">
     <div class="co"><span>${esc(m.from)}</span><span class="co-meta"><span class="lvl ${m.level === "act" ? "act" : "fyi"}">${m.level === "act" ? "Act" : "FYI"}</span>${
       m.at ? `<span class="posted">${esc(when(m.at))}</span>` : ""}</span></div>
     <h3>${esc(m.subject)}</h3>
-    ${m.why ? `<p class="why">${esc(m.why)}</p>` : ""}
-    ${m.plan ? `<div class="plan"><b>Recommended plan${m.plan.deadline ? " · by " + esc(m.plan.deadline) : ""}</b>
+    ${m.gist ? `<p class="gist">${esc(m.gist)}</p>` : ""}
+    ${m.why ? `<p class="why">${m.gist ? "<b>Why it matters</b> " : ""}${esc(m.why)}</p>` : ""}
+    ${m.plan ? `<details class="plan"><summary>Jarvis's plan${m.plan.deadline ? " · by " + esc(m.plan.deadline) : ""}</summary>
       ${m.plan.summary ? `<p>${esc(m.plan.summary)}</p>` : ""}
-      ${(m.plan.steps || []).length ? `<ol>${m.plan.steps.map((s) => `<li><span class="who ${s.who === "jarvis" ? "jarvis" : ""}">${s.who === "jarvis" ? "Jarvis" : "You"}</span>${esc(s.text)}</li>`).join("")}</ol>` : ""}</div>` : ""}
-    <div class="actions">${m.plan
-      ? `<a class="btn primary" href="${plan}" target="_blank" rel="noopener">Approve</a><a class="btn" href="${plan}" target="_blank" rel="noopener">Deny or change</a>`
-      : `<a class="btn primary" href="${plan}" target="_blank" rel="noopener">Ask Jarvis</a>`}<a class="btn" href="${plan}" target="_blank" rel="noopener">Full email</a>${
-      gmail ? `<a class="btn" href="${esc(gmail)}" target="_blank" rel="noopener">Open in Gmail</a>` : ""}</div>
+      ${(m.plan.steps || []).length ? `<ol>${m.plan.steps.map((s) => `<li><span class="who ${s.who === "jarvis" ? "jarvis" : ""}">${s.who === "jarvis" ? "Jarvis" : "You"}</span>${esc(s.text)}</li>`).join("")}</ol>` : ""}</details>` : ""}
+    <div class="actions">${gmail ? `<a class="btn primary" href="${esc(gmail)}" target="_blank" rel="noopener">Open email</a>` : ""}${m.plan
+      ? `<a class="btn" href="${page}" target="_blank" rel="noopener">Approve plan</a><a class="btn" href="${page}" target="_blank" rel="noopener">Deny or change</a>`
+      : `<a class="btn" href="${ask}" target="_blank" rel="noopener">Give me a plan</a><a class="btn" href="${page}" target="_blank" rel="noopener">Ask Jarvis</a>`}</div>
   </article>`;
 }
 

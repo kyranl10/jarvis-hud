@@ -269,6 +269,7 @@ const DEMO = {
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const safe = (u) => /^https:\/\//i.test(String(u || "")) ? String(u) : "";  // links only to https pages
 
 function tick() {
   const now = new Date();
@@ -312,11 +313,12 @@ function render(d) {
   const night = [
     ...o.comments.map((c) => ({ k: "FB", t: `${c.who} · ${c.where}`, s: c.said })),
     ...(o.dms ? [{ k: "IG", t: `${o.dms} message${o.dms > 1 ? "s" : ""}`, s: (o.dm_from || []).join(", ") }] : []),
-    ...(o.emails || []).map((e) => ({ k: "Email", t: e.subject, s: [e.from, e.snippet].filter(Boolean).join(" · ") })),
+    ...(o.emails || []).map((e) => ({ k: "Email", t: e.subject, s: [e.from, e.snippet].filter(Boolean).join(" · "), u: safe(e.url) })),
     ...(o.more_emails ? [{ k: "Email", t: `+ ${o.more_emails} more`, s: "" }] : [])
   ];
   rows($("night"), night, (i) =>
-    `<li class="row"><span class="k">${esc(i.k)}</span><span class="v">${esc(i.t)}${
+    `<li class="row"><span class="k">${esc(i.k)}</span><span class="v">${
+      i.u ? `<a href="${esc(i.u)}" target="_blank" rel="noopener">${esc(i.t)}</a>` : esc(i.t)}${
       i.s ? `<span>${esc(i.s)}</span>` : ""}</span></li>`, "");
   showMail("night", night.length);
 
@@ -572,7 +574,7 @@ async function loadMail() {
     showMail("mail", (d.flagged || []).length);
     rows($("mail"), d.flagged || [], (m) =>
       `<li class="row${m.level === "act" ? " due hot" : ""}"><span class="k">${esc(m.level === "act" ? "Act" : dayName(m.at))}</span><span class="v">${
-        `<a href="${MAIL_PAGE}${m.id ? "#" + encodeURIComponent(m.id) : ""}" target="_blank" rel="noopener">${esc(m.subject)}</a>`}<span>${
+        `<a href="${esc(safe(m.url) || MAIL_PAGE + (m.id ? "#" + encodeURIComponent(m.id) : ""))}" target="_blank" rel="noopener">${esc(m.subject)}</a>`}<span>${
         esc([m.from, m.why].filter(Boolean).join(" · "))}</span></span></li>`, "");
   } catch (e) {}
 }
