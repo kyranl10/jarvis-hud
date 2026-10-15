@@ -1,8 +1,8 @@
 {
- "updated": 1792059043282,
- "matched": 539,
+ "updated": 1792081163454,
+ "matched": 544,
  "counts": {
-  "new": 65,
+  "new": 58,
   "progress": 1,
   "applied": 2,
   "interview": 1,
@@ -20,6 +20,11 @@
  ],
  "fresh": [
   {
+   "company": "MetLife",
+   "title": "METx D&A Intern",
+   "posted": 1792076432000
+  },
+  {
    "company": "FedEx",
    "title": "Analytics Intern (Summer 2027)",
    "posted": 1792041343000
@@ -28,11 +33,6 @@
    "company": "AGCO",
    "title": "Business Intelligence Intern",
    "posted": 1792017239000
-  },
-  {
-   "company": "National Life",
-   "title": "Data Science Intern",
-   "posted": 1792016953000
   }
  ]
 }
