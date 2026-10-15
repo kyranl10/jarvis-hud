@@ -2,13 +2,214 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>Jarvis Mail</title>
-<!-- The HUD's read-only Mail page merged into Jarvis Mail (Oct 15), the page that can act on each email -->
-<meta http-equiv="refresh" content="0; url=https://claude.ai/artifact/5X4Lud3fnsAa4qAyRYUrre">
-<style>body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #04080d; color: #7fa8b6; font: 15px ui-monospace, Menlo, Consolas, monospace; }
-a { color: #6fe3ff; }</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+
+/* Same visual language as the Jarvis HUD: one dark theme by design, cyan telemetry on near-black. */
+:root {
+  --void: #04080d;
+  --panel: rgba(20, 60, 80, 0.18);
+  --panel-solid: #08131b;
+  --line: rgba(111, 227, 255, 0.22);
+  --arc: #6fe3ff;
+  --arc-dim: #4a9bb3;
+  --text: #d7f6ff;
+  --muted: #7fa8b6;
+  --gold: #ffbf4d;
+  --alert: #ff6b5b;
+  --ok: #5fe0a0;
+  --paper: #fbfcfd;
+  --ink: #15202b;
+  --display: "Rajdhani", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html { background: var(--void); }
+body {
+  background: var(--void) radial-gradient(ellipse 120% 50% at 50% -10%, rgba(111, 227, 255, 0.10), transparent 60%);
+  color: var(--text); font-family: var(--display); font-size: 17px;
+  min-height: 100vh; padding-inline: 16px;
+  padding-block: calc(20px + env(safe-area-inset-top, 0px)) calc(48px + env(safe-area-inset-bottom, 0px));
+}
+.wrap { max-width: 720px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: grid; gap: 4px; }
+header .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.24em; color: var(--arc-dim); text-transform: uppercase; }
+header h1 { margin: 0; font-size: 30px; font-weight: 600; letter-spacing: 0.03em; text-wrap: balance; }
+header p { margin: 0; color: var(--muted); font-size: 15px; }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.stat { border: 1px solid var(--line); background: var(--panel); padding: 10px 12px; display: grid; gap: 2px; }
+.stat b { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; }
+.stat i { font-style: normal; font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; }
+@media (max-width: 420px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.tab {
+  font: 600 13px var(--display); letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); background: none; border: 1px solid transparent; padding: 7px 12px; cursor: pointer;
+}
+.tab[aria-selected="true"] { color: var(--arc); border-color: var(--line); background: var(--panel); }
+.tab .n { font-family: var(--mono); letter-spacing: 0; margin-left: 6px; color: var(--arc-dim); }
+
+.list { display: grid; gap: 14px; }
+.job {
+  border: 1px solid var(--line); background: var(--panel); padding: 14px 16px 16px; display: grid; gap: 10px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+.job .co { font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--arc-dim); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.job h3 { margin: 0; font-size: 21px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.facts { display: grid; grid-template-columns: 84px 1fr; gap: 4px 12px; margin: 0; }
+.facts dt { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.facts dd { margin: 0; min-width: 0; font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+.summary { margin: 0; color: var(--text); font-size: 16px; line-height: 1.4; max-width: 65ch; }
+.reqs { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.reqs li { font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); padding: 2px 7px; }
+.job .co-meta { display: inline-flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.job .posted { color: var(--arc); font-variant-numeric: tabular-nums; }
+.fresh-tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; padding: 1px 7px; color: var(--void); background: var(--gold); font-variant-numeric: tabular-nums; }
+.odds { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; padding: 1px 7px; border: 1px solid currentColor; font-variant-numeric: tabular-nums; }
+.odds.hi { color: var(--ok); } .odds.mid { color: var(--gold); } .odds.lo { color: var(--alert); }
+.sort { margin-left: auto; display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.sort select { font-size: 14px; padding: 4px 8px; }
+.sort.src { margin-left: 0; }
+.status { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; padding: 1px 7px; border: 1px solid currentColor; text-transform: uppercase; }
+.st-tailoring, .st-review { color: var(--gold); }
+.st-ready { color: var(--arc); }
+.st-applied, .st-interview { color: var(--ok); }
+.st-offer { color: var(--ok); }
+.st-rejected, .st-denied { color: var(--alert); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+button.btn, a.btn {
+  font: 600 13px var(--display); letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none;
+  color: var(--arc); background: transparent; border: 1px solid var(--line); padding: 9px 14px; cursor: pointer;
+}
+button.btn:hover, a.btn:hover, button.btn:focus-visible, a.btn:focus-visible { border-color: var(--arc); box-shadow: 0 0 14px rgba(111, 227, 255, 0.3); outline: none; }
+button.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc); }
+button.btn.deny { color: var(--alert); border-color: rgba(255, 107, 91, 0.35); }
+button.btn:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+select { font: 500 15px var(--display); color: var(--text); background: var(--panel-solid); border: 1px solid var(--line); padding: 7px 10px; }
+textarea { width: 100%; min-height: 70px; font: 15px var(--display); color: var(--text); background: var(--panel-solid); border: 1px solid var(--line); padding: 8px 10px; resize: vertical; }
+.note { color: var(--muted); font-size: 14px; margin: 0; }
+.note.warn { color: var(--gold); }
+.empty { color: var(--muted); font-size: 16px; padding: 20px 0; text-align: center; }
+
+/* Tailored resume preview: a sheet of paper so it reads like the PDF it becomes */
+.back { font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--arc); text-decoration: none;
+  justify-self: start; border: 1px solid var(--line); padding: 8px 14px; margin-bottom: 6px; }
+.back:hover { color: var(--arc); }
+a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc); }
+.why { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.4; }
+.lvl { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; padding: 1px 7px; border: 1px solid currentColor; text-transform: uppercase; }
+.lvl.act { color: var(--alert); } .lvl.fyi { color: var(--arc); }
+.plan { border-left: 2px solid var(--arc); padding-left: 12px; display: grid; gap: 6px; }
+.plan b { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--arc-dim); font-weight: 500; }
+.plan p { margin: 0; font-size: 16px; line-height: 1.4; }
+.plan ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 16px; line-height: 1.35; }
+.who { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 0 5px; margin-right: 6px;
+       border: 1px solid var(--line); color: var(--muted); vertical-align: 2px; }
+.who.jarvis { color: var(--arc); border-color: var(--arc-dim); }
+</style>
 </head>
-<body><p>Mail moved to <a href="https://claude.ai/artifact/5X4Lud3fnsAa4qAyRYUrre">Jarvis Mail</a>.</p></body>
+<body>
+<main class="wrap">
+  <header>
+    <a class="back" href="./" id="back">‹ HUD</a>
+    <span class="kicker">Jarvis · Mail</span>
+    <h1>Emails worth your time</h1>
+    <p id="scan">Flagged by Jarvis from your UNC mail</p>
+  </header>
+  <section class="stats" aria-label="Mail overview" style="grid-template-columns: repeat(2, 1fr)">
+    <div class="stat"><b id="s-act">–</b><i>Act soon</i></div>
+    <div class="stat"><b id="s-fyi">–</b><i>Worth a look</i></div>
+  </section>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="act" aria-selected="true">Act soon<span class="n" id="n-act"></span></button>
+    <button class="tab" role="tab" data-tab="fyi" aria-selected="false">Worth a look<span class="n" id="n-fyi"></span></button>
+    <button class="tab" role="tab" data-tab="gone" aria-selected="false">Dismissed<span class="n" id="n-gone"></span></button>
+  </nav>
+  <section class="list" id="list" aria-live="polite"><p class="empty">Loading your mail…</p></section>
+  <p class="foot">The full email, Approve, Deny and your own instructions open your private Claude page</p>
+</main>
+<script>
+// Read-only list of what Jarvis flagged, from the same private feed as the HUD's Messages panel.
+// Plans here are written without names or addresses; the full emails and decisions live on the private Claude page.
+const CLAUDE = "https://claude.ai/artifact/5X4Lud3fnsAa4qAyRYUrre";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const safeUrl = (u) => /^https:\/\//i.test(String(u || "")) ? String(u) : "";
+const when = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
+let items = [], gone = [], updated = "", tab = "act";
+
+let topic = location.hash.slice(1);
+try { if (!topic) topic = localStorage.getItem("jarvis-topic") || ""; } catch (e) {}
+const ok = /^[A-Za-z0-9_-]+$/.test(topic);
+if (ok) $("back").href = "./#" + topic;
+
+for (const b of document.querySelectorAll(".tab")) {
+  b.onclick = () => { tab = b.dataset.tab; for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t === b)); render(); };
+}
+
+function card(m) {
+  const gmail = safeUrl(m.url), plan = CLAUDE + (m.id ? "#" + encodeURIComponent(m.id) : "");
+  return `<article class="job">
+    <div class="co"><span>${esc(m.from)}</span><span class="co-meta"><span class="lvl ${m.level === "act" ? "act" : "fyi"}">${m.level === "act" ? "Act" : "FYI"}</span>${
+      m.at ? `<span class="posted">${esc(when(m.at))}</span>` : ""}</span></div>
+    <h3>${esc(m.subject)}</h3>
+    ${m.why ? `<p class="why">${esc(m.why)}</p>` : ""}
+    ${m.plan ? `<div class="plan"><b>Recommended plan${m.plan.deadline ? " · by " + esc(m.plan.deadline) : ""}</b>
+      ${m.plan.summary ? `<p>${esc(m.plan.summary)}</p>` : ""}
+      ${(m.plan.steps || []).length ? `<ol>${m.plan.steps.map((s) => `<li><span class="who ${s.who === "jarvis" ? "jarvis" : ""}">${s.who === "jarvis" ? "Jarvis" : "You"}</span>${esc(s.text)}</li>`).join("")}</ol>` : ""}</div>` : ""}
+    <div class="actions">${m.plan
+      ? `<a class="btn primary" href="${plan}" target="_blank" rel="noopener">Approve</a><a class="btn" href="${plan}" target="_blank" rel="noopener">Deny or change</a>`
+      : `<a class="btn primary" href="${plan}" target="_blank" rel="noopener">Ask Jarvis</a>`}<a class="btn" href="${plan}" target="_blank" rel="noopener">Full email</a>${
+      gmail ? `<a class="btn" href="${esc(gmail)}" target="_blank" rel="noopener">Open in Gmail</a>` : ""}</div>
+  </article>`;
+}
+
+// Dismissed in the last 3 days; restoring happens on the private Claude page
+function goneCard(m) {
+  const link = CLAUDE + "#" + (m.id ? encodeURIComponent(m.id) : "dismissed");
+  return `<article class="job">
+    <div class="co"><span>${esc(m.from || "Dismissed")}</span><span class="co-meta">${m.at ? `<span class="posted">${esc(when(m.at))}</span>` : ""}</span></div>
+    <h3>${esc(m.subject)}</h3>
+    <div class="actions"><a class="btn primary" href="${link}" target="_blank" rel="noopener">Restore</a></div>
+  </article>`;
+}
+
+function render() {
+  const n = { act: items.filter((m) => m.level === "act").length };
+  n.fyi = items.length - n.act;
+  $("s-act").textContent = n.act; $("s-fyi").textContent = n.fyi;
+  $("n-act").textContent = n.act || ""; $("n-fyi").textContent = n.fyi || ""; $("n-gone").textContent = gone.length || "";
+  if (updated) $("scan").textContent = `Flagged by Jarvis from your UNC mail · last checked ${when(updated)}`;
+  if (tab === "gone") {
+    $("list").innerHTML = gone.length ? gone.map(goneCard).join("") : `<p class="empty">Nothing dismissed in the last 3 days.</p>`;
+    return;
+  }
+  const shown = items.filter((m) => (m.level === "act") === (tab === "act"));
+  $("list").innerHTML = shown.length ? shown.map(card).join("")
+    : `<p class="empty">${tab === "act" ? "Nothing needs you right now, sir." : "Nothing else worth a look."}</p>`;
+}
+
+async function load() {
+  if (!ok) { $("list").innerHTML = `<p class="empty">Open this page from your HUD to see your mail.</p>`; return; }
+  try {
+    const res = await fetch(`https://ntfy.sh/${topic.replace(/-hud$/, "")}-mail/json?poll=1&since=24h`, { cache: "no-store" });
+    const msgs = (await res.text()).trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((m) => m.event === "message");
+    if (msgs.length) { const d = JSON.parse(msgs[msgs.length - 1].message); items = d.flagged || []; gone = d.dismissed || []; updated = d.updated || ""; }
+    render();
+  } catch (e) {
+    $("list").innerHTML = `<p class="empty">Couldn't load your mail. Try again in a minute.</p>`;
+  }
+}
+load(); setInterval(load, 15 * 60000);
+</script>
+</body>
 </html>
