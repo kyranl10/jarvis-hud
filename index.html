@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jarvis">
+<meta name="theme-color" content="#04080d">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+</head>
+<body>
+<title>Jarvis HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column HUD. Arc reactor + clock up top, then stacked telemetry panels. Single dark theme by design. */
+:root {
+  --void: #04080d;
+  --panel: rgba(20, 60, 80, 0.18);
+  --line: rgba(111, 227, 255, 0.22);
+  --arc: #6fe3ff;
+  --arc-dim: #4a9bb3;
+  --text: #d7f6ff;
+  --muted: #7fa8b6;
+  --gold: #ffbf4d;
+  --alert: #ff6b5b;
+  --display: "Rajdhani", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html { background: var(--void); }
+body {
+  background: var(--void)
+    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(111, 227, 255, 0.12), transparent 60%);
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 17px;
+  min-height: 100vh;
+  padding-inline: 16px;
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 560px; margin: 0 auto; display: grid; gap: 18px; }
+
+/* Arc reactor */
+.core { display: grid; place-items: center; position: relative; padding-block: 8px; }
+.reactor { width: min(260px, 72vw); aspect-ratio: 1; max-width: 100%; position: relative; }
+.reactor svg { width: 100%; height: 100%; overflow: visible; }
+.ring { fill: none; stroke: var(--arc); }
+.spin { transform-origin: 130px 130px; animation: spin 40s linear infinite; }
+.spin.rev { animation-duration: 26s; animation-direction: reverse; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.clock {
+  position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 2px;
+}
+.clock .time {
+  font-size: clamp(44px, 13vw, 58px); font-weight: 600; letter-spacing: 0.04em; line-height: 1;
+  font-variant-numeric: tabular-nums; text-shadow: 0 0 18px rgba(111, 227, 255, 0.55);
+}
+.clock .date { font-family: var(--mono); font-size: 12px; letter-spacing: 0.18em; color: var(--arc-dim); text-transform: uppercase; }
+
+.greet { text-align: center; display: grid; gap: 6px; }
+.greet h1 { margin: 0; font-size: 26px; font-weight: 500; letter-spacing: 0.02em; text-wrap: balance; }
+.greet p { margin: 0; color: var(--muted); font-size: 16px; text-wrap: balance; }
+
+.speak {
+  justify-self: center; display: inline-flex; align-items: center; gap: 10px;
+  font: 600 14px var(--display); letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--arc); background: transparent; border: 1px solid var(--line);
+  padding: 10px 20px; border-radius: 999px; cursor: pointer;
+}
+.speak:hover, .speak:focus-visible { border-color: var(--arc); box-shadow: 0 0 16px rgba(111, 227, 255, 0.35); outline: none; }
+.speak .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--arc); box-shadow: 0 0 10px var(--arc); }
+.speak[aria-pressed="true"] .dot { animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.25; } }
+
+/* Panels */
+.panel {
+  border: 1px solid var(--line); background: var(--panel);
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  padding: 14px 16px 16px; display: grid; gap: 10px;
+}
+.panel[hidden] { display: none; }
+.panel h2 {
+  margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.28em; text-transform: uppercase; color: var(--arc);
+}
+.panel h2 small { font-family: var(--mono); font-weight: 400; letter-spacing: 0.06em; color: var(--muted); font-size: 11px; }
+.rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: baseline; }
+.row .k { font-family: var(--mono); font-size: 13px; color: var(--arc-dim); font-variant-numeric: tabular-nums; }
+.row .v { min-width: 0; font-size: 17px; font-weight: 500; line-height: 1.25; overflow-wrap: anywhere; }
+.row .v span { display: block; font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+.row .v a { color: inherit; text-decoration: none; }
+.row .v a:hover, .row .v a:focus-visible { text-decoration: underline; }
+.empty { color: var(--muted); font-size: 15px; }
+.sub { margin: 14px 0 8px; font: 400 11px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.panel h2 + .sub, .panel h2 + .sub[hidden] + .rows[hidden] + .sub { margin-top: 0; }
+
+.row.due .k { color: var(--gold); }
+.row.due.hot .k { color: var(--alert); }
+.res-W { color: var(--arc); } .res-L { color: var(--alert); } .res-D { color: var(--muted); }
+.tminus { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; padding: 1px 6px; border: 1px solid currentColor; margin-left: 8px; vertical-align: 2px; }
+
+.env { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.env div { display: grid; gap: 2px; }
+.env b { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.env i { font-style: normal; font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; color: var(--muted); text-transform: uppercase; }
+@media (max-width: 380px) { .env { grid-template-columns: repeat(2, 1fr); } }
+
+.intern-link { font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--arc); text-decoration: none; justify-self: start; }
+.intern-link:hover, .intern-link:focus-visible { text-decoration: underline; }
+
+.comms {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; text-decoration: none; color: inherit;
+  border: 1px solid var(--line); background: var(--panel); padding: 14px 16px;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+.comms:hover, .comms:focus-visible { border-color: var(--arc); box-shadow: inset 0 0 22px rgba(111, 227, 255, 0.12); outline: none; }
+.comms .ico { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--arc); display: grid; place-items: center; box-shadow: 0 0 14px rgba(111, 227, 255, 0.3); }
+.comms .ico svg { width: 18px; height: 18px; fill: none; stroke: var(--arc); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.comms b { display: block; font-size: 13px; font-weight: 700; letter-spacing: 0.28em; text-transform: uppercase; color: var(--arc); }
+.comms span { display: block; font-size: 15px; color: var(--muted); margin-top: 2px; }
+.comms i { font-style: normal; font-family: var(--mono); font-size: 18px; color: var(--arc); }
+
+.health { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin: -6px 0 2px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.health span b { font-weight: 500; color: var(--arc-dim); margin-right: 5px; }
+.health .stale, .health .stale b { color: var(--alert); }
+.foot { text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+.foot .warn, .foot.warn { color: var(--gold); }
+.sync { margin-left: 10px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.sync:hover, .sync:focus-visible { color: var(--arc); border-color: currentColor; }
+.sync:disabled { opacity: 0.6; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) { .spin, .speak .dot { animation: none !important; } }
+</style>
+
+<main class="wrap">
+  <section class="core" aria-label="Clock">
+    <div class="reactor">
+      <svg viewBox="0 0 260 260" aria-hidden="true">
+        <defs>
+          <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#6fe3ff" stop-opacity="0.22"/>
+            <stop offset="70%" stop-color="#6fe3ff" stop-opacity="0.03"/>
+            <stop offset="100%" stop-color="#6fe3ff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="130" cy="130" r="128" fill="url(#glow)"/>
+        <g class="spin"><circle class="ring" cx="130" cy="130" r="118" stroke-width="1" stroke-dasharray="2 6" opacity="0.7"/></g>
+        <g class="spin rev"><circle class="ring" cx="130" cy="130" r="104" stroke-width="5" stroke-dasharray="54 14" opacity="0.5"/></g>
+        <circle class="ring" cx="130" cy="130" r="92" stroke-width="1" opacity="0.4"/>
+        <g class="spin"><circle class="ring" cx="130" cy="130" r="84" stroke-width="2" stroke-dasharray="120 40 20 40" opacity="0.8"/></g>
+      </svg>
+      <div class="clock"><div class="time" id="time">--:--</div><div class="date" id="date"></div></div>
+    </div>
+  </section>
+
+  <section class="greet">
+    <h1 id="greeting">Good morning, sir.</h1>
+    <p id="summary">Bringing systems online.</p>
+  </section>
+
+  <p class="health" id="health" hidden aria-label="When each source last updated"></p>
+
+  <button class="speak" id="speak" type="button" aria-pressed="false"><span class="dot"></span><span id="speak-label">Brief me</span></button>
+
+  <a class="comms" id="comms" href="https://claude.ai/artifact/QvAKoTAZQz4tg1QmeChgZt" target="_blank" rel="noopener" aria-label="Talk to Jarvis">
+    <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg></span>
+    <span><b>Talk to Jarvis</b><span>Chat or send a screenshot to add it to your calendar</span></span>
+    <i aria-hidden="true">›</i>
+  </a>
+
+  <section class="panel" aria-labelledby="h-env">
+    <h2 id="h-env">Environment <small id="env-sky"></small></h2>
+    <div class="env" id="env"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-today">
+    <h2 id="h-today">Today <small id="today-count"></small></h2>
+    <ul class="rows" id="today"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="h-due">
+    <h2 id="h-due">Due <small>Canvas · next 7 days</small></h2>
+    <ul class="rows" id="due"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="h-ahead">
+    <h2 id="h-ahead">Ahead <small>next 3 days</small></h2>
+    <ul class="rows" id="ahead"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="h-mail">
+    <h2 id="h-mail">Messages <small id="mail-note"></small></h2>
+    <h3 class="sub" id="mail-head" hidden>Needs you</h3>
+    <ul class="rows" id="mail" hidden></ul>
+    <h3 class="sub" id="night-head" hidden>Last 24 hours</h3>
+    <ul class="rows" id="night" hidden></ul>
+    <p class="empty" id="mail-empty">Nothing new, sir.</p>
+    <a class="intern-link" id="mail-link" href="https://claude.ai/artifact/5X4Lud3fnsAa4qAyRYUrre" target="_blank" rel="noopener">Open Jarvis Mail ›</a>
+  </section>
+
+  <section class="panel" aria-labelledby="h-intern">
+    <h2 id="h-intern">Internship search <small id="intern-scan"></small></h2>
+    <div class="env" id="intern-stats"></div>
+    <ul class="rows" id="intern-news"></ul>
+    <ul class="rows" id="intern-new"></ul>
+    <a class="intern-link" id="intern-link" href="internships.html">Open internship search ›</a>
+  </section>
+
+  <section class="panel" aria-labelledby="h-pma">
+    <h2 id="h-pma">PMA <small>announcements</small></h2>
+    <ul class="rows" id="pma"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="h-insta">
+    <h2 id="h-insta">Instagram <small>@aplasticplant · last 24 hours</small></h2>
+    <ul class="rows" id="insta"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="h-scores">
+    <h2 id="h-scores">Scores <small>last 3 days</small></h2>
+    <ul class="rows" id="scores"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="h-games">
+    <h2 id="h-games">Upcoming games <small>next 3 days</small></h2>
+    <ul class="rows" id="games"></ul>
+  </section>
+
+  <p class="foot"><span id="foot"></span> <button class="sync" id="sync" type="button">Sync</button></p>
+</main>
+
+<script>
+const hoursFromNow = (h) => new Date(Math.round(Date.now() / 3600e3 + h) * 3600e3).toISOString();
+const DEMO = {
+  generated: null, demo: true, address: "sir",
+  weather: { temp: 58, sky: "overcast", high: 86, low: 55, rain: 0 },
+  today: [{ time: "4 PM", end: "4:30 PM", title: "Project Meeting", place: "online" }],
+  ahead: [
+    { day: "Tomorrow", time: "All day", end: "", title: "Fall Break", place: "" },
+    { day: "Fri", time: "8 AM", end: "8:30 AM", title: "Fall Break", place: "" },
+    { day: "Sat", time: "All day", end: "", title: "Game Day", place: "" }
+  ],
+  due: [
+    { day: "Sun", days: 4, title: "Problem Set 4", course: "MATH 101", time: "11:59 PM" },
+    { day: "Mon", days: 5, title: "Essay Draft", course: "ENGL 105", time: "11:59 PM" }
+  ],
+  overnight: {
+    comments: [{ who: "Sam Lee", where: "Drum Group", said: "Watch the accents in bar 12" }],
+    dms: 1, dm_from: ["jordan.k"],
+    emails: [{ from: "Prof. Rivera", subject: "Office hours moved", snippet: "Thursday office hours are in Hamilton 425 this week." }], more_emails: 0
+  },
+  pma: [{ when: "Today 9:15 AM", text: "Chapter tonight at 9:00 in the usual room", new: true }],
+  insta: [{ who: "aplasticplant", when: "Today 8:40 AM", text: "Something new is growing. More soon", url: "" }],
+  sports: {
+    scores: [
+      { at: hoursFromNow(-10), comp: "MLS", us: "Charlotte FC", them: "Orlando City SC", home: true, score: [2, 1], res: "W" },
+      { at: hoursFromNow(-40), comp: "Bundesliga", us: "Dortmund", them: "Werder Bremen", home: true, score: [1, 1], res: "D" }
+    ],
+    upcoming: [
+      { at: hoursFromNow(9), comp: "NBA", us: "the Hornets", them: "Boston Celtics", home: false, rec: ["2-1", "3-0"], tv: "ESPN" },
+      { at: hoursFromNow(50), comp: "Copa Argentina", us: "Boca Juniors", them: "Racing Club", home: null, rec: ["", ""], tv: "" }
+    ]
+  },
+  voice: "Good morning, sir. It's Wednesday the 14th. It's currently 58 degrees and overcast, with a high of 86. You have one engagement today: Project Meeting at 4 PM. Problem Set 4 for MATH 101 is due on Sunday, and 1 more this week. Tomorrow, Fall Break. Shall I leave you to it?"
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function tick() {
+  const now = new Date();
+  $("time").textContent = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M/i, "");
+  $("date").textContent = now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
+
+function greeting(name) {
+  const h = new Date().getHours();
+  const part = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  return `${part}, ${name}.`;
+}
+
+function rows(el, items, render, emptyText) {
+  el.innerHTML = items.length ? items.map(render).join("") : `<li class="empty">${esc(emptyText)}</li>`;
+}
+
+function render(d) {
+  $("greeting").textContent = greeting(d.address || "sir");
+  const n = d.today.length, dueSoon = d.due.filter((a) => a.days <= 1).length;
+  $("summary").textContent =
+    (n ? `${n} engagement${n > 1 ? "s" : ""} today` : "Your schedule is clear today") +
+    (d.due.length ? ` · ${d.due.length} assignment${d.due.length > 1 ? "s" : ""} due this week` : "") +
+    (dueSoon ? ` · ${dueSoon} due within a day` : "") + ".";
+
+  if (liveWeather) d.weather = liveWeather;  // the per-minute reading beats the one baked into the briefing
+  showWeather(d.weather);
+
+  $("today-count").textContent = n ? `${n} item${n > 1 ? "s" : ""}` : "";
+  rows($("today"), d.today, (e) =>
+    `<li class="row"><span class="k">${esc(e.time)}</span><span class="v">${esc(e.title)}${
+      e.place || e.end ? `<span>${esc([e.end && "until " + e.end, e.place].filter(Boolean).join(" · "))}</span>` : ""}</span></li>`,
+    "Nothing scheduled.");
+
+  rows($("due"), d.due, (a) =>
+    `<li class="row due${a.days <= 1 ? " hot" : ""}"><span class="k">${esc(a.day)}</span><span class="v">${esc(a.title)}<span>${
+      esc([a.course, a.time].filter(Boolean).join(" · "))}<em class="tminus">T-${esc(a.days)}d</em></span></span></li>`,
+    "Nothing due. Well done, sir.");
+
+  const o = d.overnight || { comments: [], dms: 0, dm_from: [], emails: [], more_emails: 0 };
+  const night = [
+    ...o.comments.map((c) => ({ k: "FB", t: `${c.who} · ${c.where}`, s: c.said })),
+    ...(o.dms ? [{ k: "IG", t: `${o.dms} message${o.dms > 1 ? "s" : ""}`, s: (o.dm_from || []).join(", ") }] : []),
+    ...(o.emails || []).map((e) => ({ k: "Email", t: e.subject, s: [e.from, e.snippet].filter(Boolean).join(" · ") })),
+    ...(o.more_emails ? [{ k: "Email", t: `+ ${o.more_emails} more`, s: "" }] : [])
+  ];
+  rows($("night"), night, (i) =>
+    `<li class="row"><span class="k">${esc(i.k)}</span><span class="v">${esc(i.t)}${
+      i.s ? `<span>${esc(i.s)}</span>` : ""}</span></li>`, "");
+  showMail("night", night.length);
+
+  rows($("pma"), d.pma || [], (p) =>
+    `<li class="row"><span class="k">${esc(p.when.replace(/ .*/, ""))}</span><span class="v">${esc(p.text)}<span>${
+      esc(p.when.replace(/^\S+ /, ""))}</span></span></li>`,
+    "No announcements in the last 3 days.");
+
+  $("insta").closest("section").hidden = d.insta == null;  // no Instagram token set yet
+  rows($("insta"), d.insta || [], (p) =>
+    `<li class="row"><span class="k">${esc(p.when.replace(/ .*/, ""))}</span><span class="v">${
+      p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.text || "(no caption)")}</a>` : esc(p.text || "(no caption)")}<span>${
+      esc(p.when.replace(/^\S+ /, ""))}</span></span></li>`,
+    "No posts in the last 24 hours.");
+
+  rows($("ahead"), d.ahead, (e) =>
+    `<li class="row"><span class="k">${esc(e.day)}</span><span class="v">${esc(e.title)}<span>${
+      esc([e.time, e.place].filter(Boolean).join(" · "))}</span></span></li>`,
+    "Clear skies ahead.");
+
+  const games = sportsWithin(d, 72);
+  rows($("scores"), games.scores, (g) =>
+    `<li class="row"><span class="k">${esc(dayName(g.at))}</span><span class="v">${esc(`${cap(g.us)} ${g.score[0]}–${g.score[1]} ${g.them}`)}<em class="tminus res-${esc(g.res)}">${esc(g.res)}</em><span>${
+      esc(g.comp)}</span></span></li>`,
+    "No games in the last 3 days.");
+  rows($("games"), games.upcoming, (g) =>
+    `<li class="row"><span class="k">${esc(dayName(g.at))}</span><span class="v">${esc(matchup(g))}<span>${
+      esc([clock(g.at), g.comp, g.tv].filter(Boolean).join(" · "))}</span></span></li>`,
+    "No games in the next 3 days.");
+
+  const foot = $("foot");
+  if (d.demo) {
+    foot.textContent = "Demo data · open with your topic link to go live";
+    foot.className = "warn";
+  } else {
+    const t = new Date(d.generated);
+    foot.textContent = "Last sync " + t.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    foot.className = Date.now() - t > 5 * 3600e3 ? "warn" : "";
+  }
+  window.__voice = d.voice;
+  window.__data = d;
+}
+
+const DAYS = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday", Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
+const joinAnd = (a) => a.length <= 1 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+function ordinal(n) {
+  return n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th"));
+}
+
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const clock = (at) => new Date(at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).replace(":00", "");
+const dayDiff = (at) => Math.round((new Date(new Date(at).toDateString()) - new Date(new Date().toDateString())) / 864e5);
+function dayName(at) {
+  const n = dayDiff(at);
+  return n === 0 ? "Today" : n === 1 ? "Tomorrow" : n === -1 ? "Yesterday" : new Date(at).toLocaleDateString("en-US", { weekday: "short" });
+}
+function matchup(g) {
+  const side = (name, rec) => name + (rec ? ` (${rec})` : "");
+  return `${side(cap(g.us), g.rec[0])} ${g.home === false ? "at" : "vs"} ${side(g.them, g.rec[1])}`;
+}
+// Games from the last and next `hours`, judged against the clock right now
+function sportsWithin(d, hours) {
+  const s = d.sports || { scores: [], upcoming: [] }, now = Date.now(), edge = hours * 3600e3;
+  return {
+    scores: s.scores.filter((g) => new Date(g.at) >= now - edge && new Date(g.at) <= now),
+    upcoming: s.upcoming.filter((g) => new Date(g.at) >= now && new Date(g.at) <= now + edge)
+  };
+}
+// Mirrors spoken_sports in style.py: one sentence for results, one for what's coming up
+function sportsSpeech(d) {
+  const { scores, upcoming } = sportsWithin(d, 24);
+  const names = (g) => g.say || [g.us, g.them];
+  const result = (g) => {
+    const [us, them] = names(g), [a, b] = g.score, hi = Math.max(a, b), lo = Math.min(a, b);
+    return g.res === "D" ? `${us} drew ${a || "nil"} all with ${them}`
+         : g.res === "W" ? `${us} beat ${them} ${hi} to ${lo}` : `${us} lost ${hi} to ${lo} to ${them}`;
+  };
+  const when = new Map();  // today / tonight / tomorrow -> time -> games
+  for (const g of upcoming) {
+    const n = dayDiff(g.at), hour = new Date(g.at).getHours();
+    const day = n === 0 ? (hour >= 17 ? "tonight" : "today") : n === 1 ? "tomorrow"
+              : "on " + new Date(g.at).toLocaleDateString("en-US", { weekday: "long" });
+    const t = hour < 12 ? clock(g.at) : clock(g.at).replace(" PM", ""), [us, them] = names(g);
+    if (!when.has(day)) when.set(day, new Map());
+    const times = when.get(day);
+    if (!times.has(t)) times.set(t, []);
+    times.get(t).push(`${us} play ${them}`);
+  }
+  const parts = [...when].map(([day, times], i) => `${day}${i ? "" : ","} ` + joinAnd([...times].map(([t, games]) =>
+    games.length === 1 ? `${games[0]} at ${t}` : `${joinAnd(games)}, ${games.length === 2 ? "both" : "all"} at ${t}`)));
+  const ahead = parts.length <= 1 ? parts.join("") : parts.slice(0, -1).join(", ") + ", and " + parts[parts.length - 1];
+  const results = joinAnd(scores.slice().reverse().map(result));
+  if (!results) return ahead ? `In sports, ${ahead}.` : "";
+  return `In sports, ${results}.` + (ahead ? ` ${cap(ahead)}.` : "");
+}
+
+// "Avi Thaker wrote about Project kickoff: Great chatting with you all today." Same as style.spoken_email
+const within = (part, whole) => {
+  const words = (t) => ` ${(t.toLowerCase().match(/[\p{L}\p{N}_]+/gu) || []).join(" ")} `;
+  return words(whole).includes(words(part));
+};
+function emailSpeech(e) {
+  const topic = e.subject === "(no subject)" ? "" : e.subject;
+  let said = (e.snippet || "").replace(/…$/, "").trim();
+  if (said && !/[.!?]$/.test(said)) said += ".";
+  if (!said) return topic ? `${e.from} wrote about ${topic}.` : `${e.from} sent an email.`;
+  if (topic && within(said, topic)) return `${e.from} wrote about ${topic}.`;
+  if (!topic || within(topic, said)) return `${e.from} wrote: ${said}`;
+  return `${e.from} wrote about ${topic}: ${said}`;
+}
+
+// Built at the moment you tap, so the greeting, the time and what's left today are always current
+function buildSpeech(d) {
+  const now = new Date(), name = d.address || "sir";
+  const open = `${greeting(name)} It's ${now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`;
+  const fresh = !d.demo && d.date === now.toLocaleDateString("en-CA") && d.today.every((e) => "start_at" in e);
+  if (!fresh) return `${open} ${d.voice}`;
+
+  const parts = [open, `Today is ${now.toLocaleDateString("en-US", { weekday: "long" })} the ${ordinal(now.getDate())}.`];
+  const w = d.weather;
+  if (w) parts.push(`It's currently ${w.temp} degrees and ${w.sky}, with a high of ${w.high}.` +
+                    (w.rain >= 50 ? " You may want an umbrella." : ""));
+
+  const left = d.today.filter((e) => e.all_day || new Date(e.start_at) > now);
+  const say = (e) => e.all_day ? e.title : `${e.title} at ${e.time}`;
+  if (!d.today.length) parts.push("Your schedule is clear today.");
+  else if (!left.length) parts.push("That's everything on today's schedule.");
+  else parts.push(`You have ${left.length === 1 ? "one engagement" : left.length + " engagements"}` +
+                  `${left.length < d.today.length ? " remaining" : ""} today: ${joinAnd(left.map(say))}.`);
+
+  if (d.due.length) {
+    const a = d.due[0];
+    const due = new Date(now.getTime() + a.days * 864e5).toLocaleDateString("en-US", { weekday: "long" });
+    const when = a.days === 0 ? "today" : a.days === 1 ? "tomorrow" : `on ${due}`;
+    const more = d.due.length > 1 ? `, and ${d.due.length - 1} more this week` : "";
+    parts.push(`${a.title}${a.course ? " for " + a.course : ""} is due ${when}${more}.`);
+  }
+
+  const o = d.overnight;
+  if (o && now.getHours() < 12) {
+    const bits = [];
+    if (o.comments.length) {
+      const c = o.comments[0];
+      bits.push(`${plural(o.comments.length, "new comment")} in ${c.where}. ${c.said ? `${c.who} says: ${c.said}` : `The first from ${c.who}`}`);
+    }
+    if (o.dms) bits.push(`${plural(o.dms, "Instagram message")}${o.dm_from.length ? " from " + joinAnd(o.dm_from) : ""}`);
+    const mail = (o.emails || []).slice(-3).reverse().map(emailSpeech);  // newest first
+    const more = (o.emails || []).length + (o.more_emails || 0) - mail.length;
+    if (more) mail.push(`And ${plural(more, "more email")}.`);
+    if (bits.length) parts.push(`Overnight, ${bits.join(", and ")}.`, ...mail);
+    else if (mail.length) parts.push(`Overnight, ${mail.join(" ")}`);
+  }
+
+  const news = (d.pma || []).filter((p) => p.new);
+  if (news.length && now.getHours() < 12) {
+    const text = news[0].text.replace(/…$/, "");
+    parts.push(`From PMA: ${text}${/[.!?]$/.test(text) ? "" : "."}`);
+  }
+
+  if (d.ahead.length) {
+    const e = d.ahead[0];
+    parts.push(`${e.day === "Tomorrow" ? "Tomorrow" : "On " + (DAYS[e.day] || e.day)}, ${e.time === "All day" ? e.title : `${e.title} at ${e.time}`}.`);
+  }
+  const sports = sportsSpeech(d);
+  if (sports) parts.push(sports);
+  parts.push(left.length || d.due.length ? "Shall I leave you to it?" : `Enjoy the rest of the day, ${name}.`);
+  return parts.join(" ");
+}
+
+function speak() {
+  const btn = $("speak");
+  if (!("speechSynthesis" in window) || !window.__voice) { $("speak-label").textContent = "Voice unavailable"; return; }
+  if (speechSynthesis.speaking) { speechSynthesis.cancel(); return; }
+  const u = new SpeechSynthesisUtterance(buildSpeech(window.__data));
+  const voices = speechSynthesis.getVoices();
+  u.voice = voices.find((v) => /Arthur/i.test(v.name)) || voices.find((v) => /Daniel|Google UK English Male/i.test(v.name))
+         || voices.find((v) => v.lang === "en-GB") || null;
+  u.lang = "en-GB"; u.rate = 1.0; u.pitch = 0.95;
+  u.onstart = () => { btn.setAttribute("aria-pressed", "true"); $("speak-label").textContent = "Stop"; };
+  u.onend = u.onerror = () => { btn.setAttribute("aria-pressed", "false"); $("speak-label").textContent = "Brief me"; };
+  speechSynthesis.speak(u);
+}
+
+async function load() {
+  const topic = location.hash.slice(1);
+  if (!/^[A-Za-z0-9_-]+$/.test(topic)) return render(DEMO);
+  try { localStorage.setItem("jarvis-topic", topic); } catch (e) {}
+  try {
+    const res = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=24h`, { cache: "no-store" });
+    const lines = (await res.text()).trim().split("\n").filter(Boolean);
+    const msgs = lines.map((l) => JSON.parse(l)).filter((m) => m.event === "message");
+    if (!msgs.length) throw new Error("no data yet");
+    const latest = JSON.parse(msgs[msgs.length - 1].message);
+    // Each refresh lists the sources that answered ("ok") and failed ("down"); the newest "ok" per source is its last success
+    health.refresh = msgs[msgs.length - 1].time * 1000;
+    health.names = [...(latest.ok || []), ...(latest.down || [])];
+    for (const m of msgs) {
+      try { for (const k of JSON.parse(m.message).ok || []) health.src[k] = Math.max(health.src[k] || 0, m.time * 1000); } catch (e) {}
+    }
+    showHealth();
+    render(latest);
+  } catch (e) {
+    render(DEMO);
+    $("foot").textContent = "Couldn't reach Jarvis's data, showing demo";
+  }
+}
+
+// Health strip: when each source last updated, red once it's later than its schedule allows
+const health = { src: {}, names: [], refresh: 0, triage: 0, intern: 0 };
+const SOURCE_NAMES = { calendar: "Calendar", work: "Work", canvas: "Canvas", band: "Band", gmail: "Gmail", discord: "PMA",
+  weather: "Weather", sports: "Scores", instagram: "Instagram", mail: "Mail data" };
+function showHealth() {
+  if (!health.refresh) return;
+  const now = Date.now(), h = new Date().getHours(), min = 60e3;
+  const items = [["Refresh", health.refresh, 45 * min]];
+  for (const k of health.names) items.push([SOURCE_NAMES[k] || k, health.src[k] || 0, 60 * min]);
+  // Mail triage runs every 2 hours from 8 AM to 10 PM; the internship scan every 6 hours
+  if (health.triage) items.push(["Triage", health.triage, (h >= 9 && h < 23 ? 3 * 60 : 11 * 60) * min]);
+  if (health.intern) items.push(["Internships", health.intern, 7 * 60 * min]);
+  const when = (t) => !t ? "over a day ago" : now - t < 20 * 3600e3 ? clock(new Date(t).toISOString()) : dayName(new Date(t).toISOString());
+  const stale = items.filter(([, t, max]) => now - t > max);
+  $("health").hidden = false;
+  $("health").title = stale.length ? `Stale: ${stale.map(([n]) => n).join(", ")}` : "Every source is up to date";
+  $("health").innerHTML = items.map(([n, t, max]) =>
+    `<span class="${now - t > max ? "stale" : ""}"><b>${esc(n)}</b>${esc(when(t))}</span>`).join("");
+}
+setInterval(showHealth, 60000);
+
+// Jarvis Mail: the full email and a recommended plan for each item (private page; no email content lives here)
+const MAIL_PAGE = "https://claude.ai/artifact/5X4Lud3fnsAa4qAyRYUrre";
+
+// The Messages panel: emails Jarvis flagged ("mail") above everything from the last 24 hours ("night")
+function showMail(part, count) {
+  $(part).hidden = $(part + "-head").hidden = !count;
+  $("mail-empty").hidden = !$("mail").hidden || !$("night").hidden;
+}
+
+// Emails Jarvis judged worth your attention, from the "-mail" side topic. Hidden until the first triage run.
+async function loadMail() {
+  const topic = location.hash.slice(1);
+  if (!/^[A-Za-z0-9_-]+$/.test(topic)) return;
+  try {
+    const res = await fetch(`https://ntfy.sh/${topic.replace(/-hud$/, "")}-mail/json?poll=1&since=24h`, { cache: "no-store" });
+    const msgs = (await res.text()).trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((m) => m.event === "message");
+    if (!msgs.length) return;
+    const d = JSON.parse(msgs[msgs.length - 1].message);
+    health.triage = Date.parse(d.updated) || 0; showHealth();
+    $("mail-note").textContent = d.updated ? `checked ${dayName(d.updated).toLowerCase()} ${clock(d.updated)}` : "";
+    showMail("mail", (d.flagged || []).length);
+    rows($("mail"), d.flagged || [], (m) =>
+      `<li class="row${m.level === "act" ? " due hot" : ""}"><span class="k">${esc(m.level === "act" ? "Act" : dayName(m.at))}</span><span class="v">${
+        `<a href="${MAIL_PAGE}${m.id ? "#" + encodeURIComponent(m.id) : ""}" target="_blank" rel="noopener">${esc(m.subject)}</a>`}<span>${
+        esc([m.from, m.why].filter(Boolean).join(" · "))}</span></span></li>`, "");
+  } catch (e) {}
+}
+
+// Counts only, written by the internship scan every 6 hours. No resume or application details live here.
+const NEWS = { applied: "Application received", interview: "Interview news", offer: "Offer news", rejected: "Application closed" };
+async function loadIntern() {
+  try {
+    const res = await fetch("intern.json", { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const d = await res.json(), c = d.counts || {};
+    health.intern = d.updated || 0; showHealth();
+    $("intern-scan").textContent = `${d.matched ?? 0} matches · scanned ${dayName(d.updated).toLowerCase()} ${clock(d.updated)}`;
+    $("intern-stats").innerHTML = [["To review", c.new], ["In progress", c.progress], ["Applied", c.applied], ["Interviews", c.interview]]
+      .map(([k, v]) => `<div><b>${esc(v ?? 0)}</b><i>${esc(k)}</i></div>`).join("");
+    $("intern-news").innerHTML = (d.news || []).map((n) =>
+      `<li class="row due hot"><span class="k">${esc(dayName(n.at))}</span><span class="v">${esc(NEWS[n.status] || "Application update")}<span>Details on your internships page</span></span></li>`).join("");
+    rows($("intern-new"), d.fresh || [], (j) =>
+      `<li class="row"><span class="k">${esc(j.posted ? new Date(j.posted).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "New")}</span><span class="v">${esc(j.company)}<span>${esc(j.title)}</span></span></li>`, "");
+    if (!(d.fresh || []).length) $("intern-new").innerHTML = "";
+  } catch (e) {
+    $("intern-stats").innerHTML = `<p class="empty">Waiting for the first scan.</p>`;
+  }
+}
+
+// Live conditions straight from Open-Meteo (free, no key), refreshed every minute. Same fields as weather.py.
+const SKY = {
+  0: "clear", 1: "mostly clear", 2: "partly cloudy", 3: "overcast",
+  45: "foggy", 48: "foggy", 51: "drizzling", 53: "drizzling", 55: "drizzling heavily",
+  61: "lightly raining", 63: "raining", 65: "raining heavily", 71: "lightly snowing",
+  73: "snowing", 75: "snowing heavily", 80: "showery", 81: "showery", 82: "pouring",
+  95: "stormy", 96: "stormy with hail", 99: "stormy with hail"
+};
+let liveWeather = null;
+
+function showWeather(w) {
+  $("env-sky").textContent = w ? w.sky + (w.at ? " · " + clock(w.at) : "") : "offline";
+  $("env").innerHTML = w
+    ? [["Now", w.temp + "°"], ["High", w.high + "°"], ["Low", w.low + "°"], ["Rain", w.rain + "%"]]
+        .map(([k, v]) => `<div><b>${esc(v)}</b><i>${esc(k)}</i></div>`).join("")
+    : `<p class="empty">Weather sensors unavailable.</p>`;
+}
+
+async function loadWeather() {
+  try {
+    const q = new URLSearchParams({
+      latitude: 35.9132, longitude: -79.0558, timezone: "America/New_York", forecast_days: 1,
+      current: "temperature_2m,weather_code",
+      daily: "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+      temperature_unit: "fahrenheit"
+    });
+    const res = await fetch("https://api.open-meteo.com/v1/forecast?" + q, { cache: "no-store" });
+    if (!res.ok) throw new Error(res.status);
+    const { current: c, daily: day } = await res.json();
+    liveWeather = {
+      temp: Math.round(c.temperature_2m), sky: SKY[c.weather_code] || "mixed",
+      high: Math.round(day.temperature_2m_max[0]), low: Math.round(day.temperature_2m_min[0]),
+      rain: day.precipitation_probability_max[0] || 0, at: new Date()
+    };
+    if (window.__data) window.__data.weather = liveWeather;
+    showWeather(liveWeather);
+  } catch (e) {}  // keep whatever the briefing last said
+}
+
+// Opened without the link's hash (e.g. a bare bookmark): reuse the topic saved on this device.
+try { const saved = localStorage.getItem("jarvis-topic"); if (location.hash.length < 2 && saved) history.replaceState(null, "", "#" + saved); } catch (e) {}
+$("intern-link").href = "internships.html" + location.hash;
+$("mail-link").href = MAIL_PAGE;  // Jarvis Mail is the one Mail page: read, approve, dismiss and restore there
+$("speak").addEventListener("click", speak);
+loadIntern(); setInterval(loadIntern, 15 * 60000);
+loadWeather(); setInterval(loadWeather, 60000);
+if ("speechSynthesis" in window) speechSynthesis.getVoices();
+tick(); setInterval(tick, 10000);
+load(); setInterval(load, 15 * 60000);
+loadMail(); setInterval(loadMail, 15 * 60000);
+// Sync asks the backend for a fresh run (it watches the "-sync" side topic), then reloads once new data lands
+$("sync").addEventListener("click", async () => {
+  const b = $("sync"), topic = location.hash.slice(1), done = (t) => {
+    b.textContent = t; setTimeout(() => { b.textContent = "Sync"; b.disabled = false; }, 3000);
+  };
+  b.disabled = true; b.textContent = "Syncing…";
+  if (!/^[A-Za-z0-9_-]+$/.test(topic)) { await Promise.allSettled([load(), loadIntern(), loadWeather()]); return done("Synced"); }
+  const before = (window.__data || {}).generated;
+  try { await fetch(`https://ntfy.sh/${topic.replace(/-hud$/, "")}-sync`, { method: "POST", body: "sync" }); } catch (e) {}
+  for (let i = 0; i < 18; i++) {  // up to 3 minutes
+    await new Promise((r) => setTimeout(r, 10000));
+    await load();
+    if ((window.__data || {}).generated !== before) {
+      await Promise.allSettled([loadMail(), loadIntern(), loadWeather()]);
+      return done("Synced");
+    }
+  }
+  done("Still working");
+});
+</script>
+</body>
+</html>

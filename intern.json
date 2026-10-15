@@ -1,0 +1,38 @@
+{
+ "updated": 1792015685212,
+ "matched": 520,
+ "counts": {
+  "new": 46,
+  "progress": 1,
+  "applied": 2,
+  "interview": 1,
+  "denied": 0
+ },
+ "news": [
+  {
+   "status": "applied",
+   "at": 1791987719000
+  },
+  {
+   "status": "interview",
+   "at": 1791985553296
+  }
+ ],
+ "fresh": [
+  {
+   "company": "Phillips 66",
+   "title": "University Intern - ERI Analytical Solutions",
+   "posted": 1791941067000
+  },
+  {
+   "company": "Assurant",
+   "title": "Data Support Analyst Intern",
+   "posted": 1791936000000
+  },
+  {
+   "company": "Vertiv",
+   "title": "Data Analytics Intern",
+   "posted": 1791900365000
+  }
+ ]
+}
