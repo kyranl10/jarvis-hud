@@ -164,6 +164,8 @@ for (const b of document.querySelectorAll(".tab")) {
   };
 }
 
+// Requirements arrive as a list, or from some scans as one "a; b; c" string
+const reqs = (r) => Array.isArray(r) ? r : typeof r === "string" ? r.split(/;\s*/).filter(Boolean) : [];
 function card(j) {
   const d = j.details || {}, st = j.status || "new", url = safeUrl(j.url);
   const facts = [
@@ -180,7 +182,7 @@ function card(j) {
     ${j.news ? `<p class="note warn">${esc(day(j.news.at))}: ${esc(j.news.text)}</p>` : ""}
     <dl class="facts">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
     ${d.summary ? `<p class="summary">${esc(d.summary)}</p>` : `<p class="note">No description could be read from the posting. Open it to see the details.</p>`}
-    ${(d.requirements || []).length ? `<ul class="reqs">${d.requirements.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+    ${reqs(d.requirements).length ? `<ul class="reqs">${reqs(d.requirements).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
     <div class="actions">${actions}${url ? `<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">View posting</a>` : ""}</div>
   </article>`;
 }
