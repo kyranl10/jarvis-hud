@@ -1,8 +1,8 @@
 {
- "updated": 1792037385590,
- "matched": 536,
+ "updated": 1792059043282,
+ "matched": 539,
  "counts": {
-  "new": 62,
+  "new": 65,
   "progress": 1,
   "applied": 2,
   "interview": 1,
@@ -20,6 +20,11 @@
  ],
  "fresh": [
   {
+   "company": "FedEx",
+   "title": "Analytics Intern (Summer 2027)",
+   "posted": 1792041343000
+  },
+  {
    "company": "AGCO",
    "title": "Business Intelligence Intern",
    "posted": 1792017239000
@@ -28,11 +33,6 @@
    "company": "National Life",
    "title": "Data Science Intern",
    "posted": 1792016953000
-  },
-  {
-   "company": "AECOM",
-   "title": "Engineering/Data Analytics Intern",
-   "posted": 1792016261000
   }
  ]
 }
