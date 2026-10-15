@@ -54,7 +54,6 @@ header p { margin: 0; color: var(--muted); font-size: 15px; }
   font: 600 13px var(--display); letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--muted); background: none; border: 1px solid transparent; padding: 7px 12px; cursor: pointer;
 }
-a.tab { text-decoration: none; }
 .tab[aria-selected="true"] { color: var(--arc); border-color: var(--line); background: var(--panel); }
 .tab .n { font-family: var(--mono); letter-spacing: 0; margin-left: 6px; color: var(--arc-dim); }
 
@@ -126,7 +125,9 @@ a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc);
 
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="new" aria-selected="true">To review<span class="n" id="n-new"></span></button>
-    <a class="tab" href="https://claude.ai/artifact/VqWzcc7FFSFHTUTnWHy9gh" target="_blank" rel="noopener" title="Kept off this public page">In progress, applied, denied ›</a>
+    <button class="tab" role="tab" data-tab="progress" aria-selected="false">In progress<span class="n" id="n-progress"></span></button>
+    <button class="tab" role="tab" data-tab="applied" aria-selected="false">Applied<span class="n" id="n-applied"></span></button>
+    <button class="tab" role="tab" data-tab="denied" aria-selected="false">Denied<span class="n" id="n-denied"></span></button>
     <label class="sort">Sort <select id="sort"><option value="posted">Newest</option><option value="odds">Best odds</option></select></label>
     <label class="sort src">Source <select id="src"><option value="all">All</option></select></label>
   </nav>
@@ -155,10 +156,10 @@ let data = { jobs: [] }, tab = "new";
 let topic = location.hash.slice(1);
 try { if (!topic) topic = localStorage.getItem("jarvis-topic") || ""; } catch (e) {}
 if (/^[A-Za-z0-9_-]+$/.test(topic)) $("back").href = "./#" + topic;
-for (const b of document.querySelectorAll(".tab[data-tab]")) {
+for (const b of document.querySelectorAll(".tab")) {
   b.onclick = () => {
     tab = b.dataset.tab;
-    for (const t of document.querySelectorAll(".tab[data-tab]")) t.setAttribute("aria-selected", String(t === b));
+    for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t === b));
     render();
   };
 }
@@ -217,10 +218,9 @@ function render() {
     for (const [t, sts] of Object.entries(TABS)) if (sts.includes(j.status || "new")) c[t]++;
     if (j.status === "interview" || j.status === "offer") c.interview++;
   }
-  // This page is public, so it lists only postings to review; the rest are counts, kept on the Claude page
-  const counts = data.counts || c;
-  for (const k of ["new", "progress", "applied", "interview"]) $("s-" + k).textContent = counts[k] ?? 0;
-  $("n-new").textContent = c.new || "";
+  // Without the private feed every listing looks new, so the totals come from the public counts instead
+  for (const k of ["new", "progress", "applied", "interview"]) $("s-" + k).textContent = (data.mine ? c : data.counts || c)[k] ?? 0;
+  for (const t of Object.keys(TABS)) $("n-" + t).textContent = c[t] || "";
   if (data.updated) $("scan").textContent = `Summer 2027 and co-ops · data roles · US and remote · last searched ${
     new Date(data.updated).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
   fillSources(data.jobs);
@@ -230,10 +230,30 @@ function render() {
                            applied: "No applications yet.", denied: "Nothing denied." }[tab]}</p>`;
 }
 
+// Statuses, replies and older acted-on jobs aren't in the public jobs.json. They come through the HUD's
+// private ntfy feed, so they only show when this page is opened from Kyran's HUD link (or after it on this device).
+async function privateView() {
+  if (!/^[A-Za-z0-9_-]+$/.test(topic)) return null;
+  try {
+    const res = await fetch(`https://ntfy.sh/${topic.replace(/-hud$/, "")}-jobs/json?poll=1&since=24h`, { cache: "no-store" });
+    const msgs = (await res.text()).trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((m) => m.event === "message");
+    return msgs.length ? JSON.parse(msgs[msgs.length - 1].message) : null;
+  } catch (e) { return null; }
+}
+
 async function load() {
   try {
-    const res = await fetch("jobs.json", { cache: "no-store" });
+    const [res, mine] = await Promise.all([fetch("jobs.json", { cache: "no-store" }), privateView()]);
     data = await res.json();
+    data.mine = !!mine;
+    if (mine) {
+      const have = new Set(data.jobs.map((j) => j.id));
+      data.jobs.push(...(mine.cards || []).filter((c) => !have.has(c.id)));
+      for (const j of data.jobs) {
+        const st = (mine.status || {})[j.id];
+        if (st) { j.status = st.s; if (st.n) j.news = { text: st.n, at: st.a }; }
+      }
+    }
     render();
   } catch (e) {
     $("list").innerHTML = `<p class="empty">Couldn't load the internship list. Try again in a minute.</p>`;
