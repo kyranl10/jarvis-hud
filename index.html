@@ -537,8 +537,9 @@ function showHealth() {
   // Mail triage runs every 2 hours from 8 AM to 10 PM; the internship scan every 6 hours
   if (health.triage) items.push(["Triage", health.triage, (h >= 9 && h < 23 ? 3 * 60 : 11 * 60) * min]);
   if (health.intern) items.push(["Internships", health.intern, 7 * 60 * min]);
-  // Application statuses: written by the hourly status sync, then relayed through the private feed
-  if (health.jobs) items.push(["Statuses", health.jobs, 90 * min]);
+  // Application statuses: the hourly status sync only writes them when something changed, and the 6-hourly
+  // internship scan always does, so a quiet stretch with no news is normal; only flag it past the scan's window
+  if (health.jobs) items.push(["Statuses", health.jobs, 7 * 60 * min]);
   const when = (t) => !t ? "over a day ago" : now - t < 20 * 3600e3 ? clock(new Date(t).toISOString()) : dayName(new Date(t).toISOString());
   const stale = items.filter(([, t, max]) => now - t > max);
   $("health").hidden = false;
