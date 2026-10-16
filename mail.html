@@ -118,6 +118,20 @@ a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc);
 .who { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 0 5px; margin-right: 6px;
        border: 1px solid var(--line); color: var(--muted); vertical-align: 2px; }
 .who.jarvis { color: var(--arc); border-color: var(--arc-dim); }
+.result { border-left: 2px solid var(--ok); padding-left: 12px; margin: 0; font-size: 16px; line-height: 1.4; }
+.result.blocked { border-color: var(--gold); }
+.links { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; padding: 1px 7px; border: 1px solid currentColor; text-transform: uppercase; }
+.tag.working, .tag.needs_you { color: var(--gold); } .tag.done { color: var(--ok); } .tag.denied, .tag.none { color: var(--muted); }
+.clears { align-self: center; margin-left: 4px; font: 12px var(--mono); color: var(--muted); }
+.mail { background: var(--panel-solid); border: 1px solid var(--line); padding: 12px 14px; display: grid; gap: 8px; }
+.mail pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 15px/1.45 var(--display); color: var(--text); max-height: 60vh; overflow-y: auto; }
+textarea { box-sizing: border-box; width: 100%; min-height: 70px; font: 15px var(--display); color: var(--text); background: var(--panel-solid); border: 1px solid var(--line); padding: 8px 10px; resize: vertical; }
+button.btn.primary, a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc); }
+button.btn.deny { color: var(--alert); border-color: rgba(255, 107, 91, 0.35); }
+button.btn:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+.foot { text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; min-height: 1em; }
+.job.focus { border-color: var(--arc); }
 </style>
 </head>
 <body>
@@ -126,102 +140,176 @@ a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc);
     <a class="back" href="./" id="back">‹ HUD</a>
     <span class="kicker">Jarvis · Mail</span>
     <h1>Emails worth your time</h1>
-    <p id="scan">Flagged by Jarvis from your UNC mail</p>
+    <p id="scan">What each email says, with a plan whenever you ask. Nothing is ever sent without you.</p>
   </header>
-  <section class="stats" aria-label="Mail overview" style="grid-template-columns: repeat(2, 1fr)">
-    <div class="stat"><b id="s-act">–</b><i>Act soon</i></div>
-    <div class="stat"><b id="s-fyi">–</b><i>Worth a look</i></div>
-  </section>
   <nav class="tabs" role="tablist">
-    <button class="tab" role="tab" data-tab="act" aria-selected="true">Act soon<span class="n" id="n-act"></span></button>
-    <button class="tab" role="tab" data-tab="fyi" aria-selected="false">Worth a look<span class="n" id="n-fyi"></span></button>
-    <button class="tab" role="tab" data-tab="gone" aria-selected="false">Dismissed<span class="n" id="n-gone"></span></button>
+    <button class="tab" role="tab" data-tab="needs" aria-selected="true">Needs you<span class="n" id="n-needs"></span></button>
+    <button class="tab" role="tab" data-tab="fyi" aria-selected="false">FYI<span class="n" id="n-fyi"></span></button>
+    <button class="tab" role="tab" data-tab="done" aria-selected="false">Handled<span class="n" id="n-done"></span></button>
+    <button class="tab" role="tab" data-tab="dismissed" aria-selected="false">Dismissed<span class="n" id="n-dismissed"></span></button>
   </nav>
   <section class="list" id="list" aria-live="polite"><p class="empty">Loading your mail…</p></section>
-  <p class="foot">Plans, Approve, Deny and your own instructions open your private Claude page</p>
+  <p class="foot" id="foot"></p>
 </main>
+<script src="jarvis.js"></script>
 <script>
-// Read-only list of what Jarvis flagged, from the same private feed as the HUD's Messages panel.
-// Plans here are written without names or addresses; the full emails and decisions live on the private Claude page.
-const CLAUDE = "https://claude.ai/artifact/5X4Lud3fnsAa4qAyRYUrre";
+// Your mail, as Jarvis's triage left it. On the private site: plans come from the site's quick AI in seconds,
+// Dismiss and Restore save at once, and Approve or your own instructions wake Jarvis (Claude) to write drafts.
+// The public GitHub copy only shows the flagged list from the HUD's feed.
+const KEEP_DISMISSED = 3 * 24 * 3600e3;
+const STATUS = { working: "Jarvis is on it", done: "Done", denied: "Dismissed", needs_you: "Needs your input" };
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const safeUrl = (u) => /^https:\/\//i.test(String(u || "")) ? String(u) : "";
+const esc = J.esc, safeUrl = J.safeUrl;
 const when = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
-let items = [], gone = [], updated = "", tab = "act";
+const say = (t) => { $("foot").textContent = t || ""; };
+let live = false, items = new Map(), tab = "needs";
+const open = new Set(), keep = new Map(), busy = new Set();
 
-let topic = location.hash.slice(1);
-try { if (!topic) topic = localStorage.getItem("jarvis-topic") || ""; } catch (e) {}
-const ok = /^[A-Za-z0-9_-]+$/.test(topic);
-if (ok) $("back").href = "./#" + topic;
-
+function bucket(m) {
+  const st = m.status || "open";
+  if (st === "open") return m.plan || m.level === "act" ? "needs" : "fyi";
+  if (st === "needs_you" || st === "working") return "needs";
+  return st === "denied" ? "dismissed" : "done";
+}
 for (const b of document.querySelectorAll(".tab")) {
   b.onclick = () => { tab = b.dataset.tab; for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t === b)); render(); };
 }
 
-// Each card leads with what the email says; a plan is only made when you ask for one on the Claude page
-function card(m) {
-  const gmail = safeUrl(m.url), page = CLAUDE + (m.id ? "#" + encodeURIComponent(m.id) : "");
-  const ask = CLAUDE + (m.id ? "#plan:" + encodeURIComponent(m.id) : "");
-  return `<article class="job">
-    <div class="co"><span>${esc(m.from)}</span><span class="co-meta"><span class="lvl ${m.level === "act" ? "act" : "fyi"}">${m.level === "act" ? "Act" : "FYI"}</span>${
-      m.at ? `<span class="posted">${esc(when(m.at))}</span>` : ""}</span></div>
-    <h3>${esc(m.subject)}</h3>
-    ${m.gist ? `<p class="gist">${esc(m.gist)}</p>` : ""}
-    ${m.why ? `<p class="why">${m.gist ? "<b>Why it matters</b> " : ""}${esc(m.why)}</p>` : ""}
-    ${m.plan ? `<details class="plan"><summary>Jarvis's plan${m.plan.deadline ? " · by " + esc(m.plan.deadline) : ""}</summary>
-      ${m.plan.summary ? `<p>${esc(m.plan.summary)}</p>` : ""}
-      ${(m.plan.steps || []).length ? `<ol>${m.plan.steps.map((s) => `<li><span class="who ${s.who === "jarvis" ? "jarvis" : ""}">${s.who === "jarvis" ? "Jarvis" : "You"}</span>${esc(s.text)}</li>`).join("")}</ol>` : ""}</details>` : ""}
-    <div class="actions">${gmail ? `<a class="btn primary" href="${esc(gmail)}" target="_blank" rel="noopener">Open email</a>` : ""}${m.plan
-      ? `<a class="btn" href="${page}" target="_blank" rel="noopener">Approve plan</a><a class="btn" href="${page}" target="_blank" rel="noopener">Deny or change</a>`
-      : `<a class="btn" href="${ask}" target="_blank" rel="noopener">Give me a plan</a><a class="btn" href="${page}" target="_blank" rel="noopener">Ask Jarvis</a>`}</div>
-  </article>`;
-}
-
-// Dismissed in the last 3 days; restoring happens on the private Claude page
-function goneCard(m) {
-  const link = CLAUDE + "#" + (m.id ? encodeURIComponent(m.id) : "dismissed");
-  return `<article class="job">
-    <div class="co"><span>${esc(m.from || "Dismissed")}</span><span class="co-meta">${m.at ? `<span class="posted">${esc(when(m.at))}</span>` : ""}</span></div>
-    <h3>${esc(m.subject)}</h3>
-    <div class="actions"><a class="btn primary" href="${link}" target="_blank" rel="noopener">Restore</a></div>
-  </article>`;
-}
-
 function render() {
-  const n = { act: items.filter((m) => m.level === "act").length };
-  n.fyi = items.length - n.act;
-  $("s-act").textContent = n.act; $("s-fyi").textContent = n.fyi;
-  $("n-act").textContent = n.act || ""; $("n-fyi").textContent = n.fyi || ""; $("n-gone").textContent = gone.length || "";
-  if (updated) $("scan").textContent = `Flagged by Jarvis from your UNC mail · last checked ${when(updated)}`;
-  if (tab === "gone") {
-    $("list").innerHTML = gone.length ? gone.map(goneCard).join("") : `<p class="empty">Nothing dismissed in the last 3 days.</p>`;
+  const all = [...items.values()];
+  for (const t of ["needs", "fyi", "done", "dismissed"]) $("n-" + t).textContent = all.filter((m) => bucket(m) === t).length || "";
+  for (const ta of document.querySelectorAll("textarea[data-id]")) keep.set(ta.dataset.id, ta.value);
+  const shown = all.filter((m) => bucket(m) === tab).sort((a, b) => tab === "done" || tab === "dismissed"
+    ? (b.handled || b.decidedAt || 0) - (a.handled || a.decidedAt || 0)
+    : (a.level === "act") === (b.level === "act") ? String(b.at).localeCompare(String(a.at)) : a.level === "act" ? -1 : 1);
+  if (!shown.length) {
+    $("list").innerHTML = `<p class="empty">${{ needs: "Nothing needs you right now, sir.", fyi: "No FYI emails.", done: "Nothing handled yet.", dismissed: "Nothing dismissed in the last 3 days." }[tab]}</p>`;
     return;
   }
-  const shown = items.filter((m) => (m.level === "act") === (tab === "act"));
-  $("list").innerHTML = shown.length ? shown.map(card).join("")
-    : `<p class="empty">${tab === "act" ? "Nothing needs you right now, sir." : "Nothing else worth a look."}</p>`;
+  $("list").innerHTML = shown.map(card).join("");
+  for (const ta of document.querySelectorAll("textarea[data-id]")) ta.value = keep.get(ta.dataset.id) || "";
+  for (const el of document.querySelectorAll("[data-act]")) el.onclick = () => act(el.dataset.act, el.dataset.id);
+}
+
+function outlookUrl(d) {
+  if (!d || !(d.subject || d.body)) return "";
+  return "https://outlook.office.com/mail/deeplink/compose?" + [["to", d.to], ["cc", d.cc], ["subject", d.subject], ["body", d.body]]
+    .filter(([, v]) => v).map(([k, v]) => k + "=" + encodeURIComponent(String(v))).join("&");
+}
+
+function card(m) {
+  const st = m.status || "open", p = m.plan, gmail = safeUrl(m.url), id = esc(m.id);
+  let h = `<div class="co"><span>${esc(m.from)}</span><span class="co-meta">${st === "open"
+      ? `<span class="lvl ${m.level === "act" ? "act" : "fyi"}">${m.level === "act" ? "Act" : m.level === "fyi" ? "FYI" : "Mail"}</span>`
+      : `<span class="tag ${esc(st)}">${esc(STATUS[st] || st)}</span>`}${m.at ? `<span class="posted">${esc(when(m.at))}</span>` : ""}</span></div>
+    <h3>${esc(m.subject)}</h3>
+    ${m.gist ? `<p class="gist">${esc(m.gist)}</p>` : ""}
+    ${m.why ? `<p class="why">${m.gist ? "<b>Why it matters</b> " : ""}${esc(m.why)}</p>` : ""}`;
+  if (p) h += `<details class="plan" ${m.plannedAt && Date.now() - m.plannedAt < 6 * 3600e3 ? "open" : ""}><summary>Jarvis's plan${p.deadline ? " · by " + esc(p.deadline) : ""}</summary>
+      ${p.summary ? `<p>${esc(p.summary)}</p>` : ""}
+      ${(p.steps || []).length ? `<ol>${p.steps.map((s) => `<li><span class="who ${s.who === "jarvis" ? "jarvis" : ""}">${s.who === "jarvis" ? "Jarvis" : "You"}</span>${esc(s.text)}</li>`).join("")}</ol>` : ""}</details>`;
+  if (m.decision && st !== "open") h += `<p class="note">You ${m.decision === "approve" ? "approved the plan" : m.decision === "deny" ? "dismissed it" : "said"}${m.note ? `: “${esc(m.note)}”` : "."}</p>`;
+  if (m.result) h += `<p class="result ${st === "needs_you" ? "blocked" : ""}">${esc(m.result)}</p>`;
+  const links = (m.links || []).filter((l) => safeUrl(l.url)), outlook = outlookUrl(m.outlook);
+  if (links.length || outlook) h += `<div class="links">${links.map((l) => `<a class="btn" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label || "Open")}</a>`).join("")}${
+    outlook ? `<a class="btn primary" href="${esc(outlook)}" target="_blank" rel="noopener" title="Opens a new email from your UNC account with this draft filled in">Open in Outlook</a>` : ""}</div>`;
+  if (st === "working") h += `<p class="note warn">Jarvis is working on this. It shows up here when it's done, usually within a couple of minutes.</p>`;
+  const canRead = live && m.body;
+  h += `<div class="actions">${canRead ? `<button class="btn" data-act="read" data-id="${id}">${open.has(m.id) ? "Hide email" : "Read email"}</button>` : ""}${
+    gmail ? `<a class="btn ${canRead ? "" : "primary"}" href="${esc(gmail)}" target="_blank" rel="noopener">Open in Gmail</a>` : ""}</div>`;
+  if (open.has(m.id) && m.body) h += `<div class="mail"><pre>${esc(m.body)}</pre></div>`;
+  if (!live) return `<article class="job" id="m-${id}">${h}</article>`;
+  if (st === "open" || st === "needs_you") {
+    const thinking = busy.has(m.id);
+    h += `<label class="note" for="r-${id}">${p ? "Your input (optional for Approve)" : "Want Jarvis to do something with this? (optional for a plan)"}</label>
+      <textarea id="r-${id}" data-id="${id}" placeholder="${p ? "e.g. make the email shorter, mention my VenueHorn work" : "e.g. draft a reply saying I'll be there"}"></textarea>
+      <div class="actions">
+        ${p ? `<button class="btn primary" data-act="approve" data-id="${id}">Approve plan</button><button class="btn" data-act="plan" data-id="${id}" ${thinking ? "disabled" : ""}>Redo plan</button>`
+            : `<button class="btn primary" data-act="plan" data-id="${id}" ${thinking ? "disabled" : ""}>${thinking ? "Planning…" : "Give me a plan"}</button>`}
+        <button class="btn" data-act="respond" data-id="${id}">${p ? "Send my input" : "Ask Jarvis"}</button>
+        <button class="btn deny" data-act="deny" data-id="${id}">${p ? "Deny" : "Dismiss"}</button></div>`;
+  } else if (st === "denied") {
+    const clears = new Date((m.decidedAt || Date.now()) + KEEP_DISMISSED).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    h += `<div class="actions"><button class="btn primary" data-act="reopen" data-id="${id}">Restore</button><span class="clears">Clears ${esc(clears)}</span></div>`;
+  } else if (st === "done") {
+    h += `<div class="actions"><button class="btn" data-act="reopen" data-id="${id}">Reopen</button></div>`;
+  }
+  return `<article class="job" id="m-${id}">${h}</article>`;
+}
+
+async function save(id, patch) {
+  const m = items.get(id), before = m && { ...m };
+  if (m) items.set(id, { ...m, ...patch });
+  render();
+  try { await J.save("mail/" + id, patch); say(""); return true; }
+  catch (e) { if (before) items.set(id, before); render(); say("Couldn't save that. " + e.message); return false; }
+}
+
+async function act(what, id) {
+  const m = items.get(id);
+  if (!m) return;
+  if (what === "read") { open.has(id) ? open.delete(id) : open.add(id); return render(); }
+  const note = ($("r-" + id)?.value || "").trim();
+  if (what === "deny") { keep.delete(id); return save(id, { status: "denied", decision: "deny", note, decidedAt: Date.now() }); }
+  if (what === "reopen") return save(id, { status: "open", decision: null, note: "", result: "", links: [] });
+  if (what === "plan") {
+    busy.add(id); render();
+    try { const out = await J.ai("plan", { id, note }); items.set(id, { id, ...out.doc }); keep.delete(id); say(""); }
+    catch (e) { say("Couldn't make a plan. " + e.message); }
+    busy.delete(id); return render();
+  }
+  // Approve and your own instructions need Claude with your Gmail: save the request, then wake Jarvis
+  if (what === "respond" && !note) return say("Type what you want Jarvis to do first.");
+  if (await save(id, { status: "working", decision: what, note, decidedAt: Date.now(), result: "", links: [] })) {
+    keep.delete(id);
+    const w = await J.wake("Mail request: " + id);
+    if (!w.woke) say("Saved. Jarvis will pick this up on its next scheduled run.");
+  }
+}
+
+let jumped = false;
+function jump() {
+  const id = decodeURIComponent(location.hash.slice(1)), m = items.get(id);
+  if (jumped || !m) return;
+  jumped = true;
+  document.querySelector(`.tab[data-tab="${bucket(m)}"]`)?.click();
+  const el = $("m-" + id);
+  if (el) { el.classList.add("focus"); el.scrollIntoView({ block: "start" }); }
 }
 
 async function load() {
-  if (!ok) { $("list").innerHTML = `<p class="empty">Open this page from your HUD to see your mail.</p>`; return; }
+  if (busy.size || document.activeElement?.tagName === "TEXTAREA") return;
   try {
-    const res = await fetch(`https://ntfy.sh/${topic.replace(/-hud$/, "")}-mail/json?poll=1&since=24h`, { cache: "no-store" });
-    const msgs = (await res.text()).trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((m) => m.event === "message");
-    if (msgs.length) { const d = JSON.parse(msgs[msgs.length - 1].message); items = d.flagged || []; gone = d.dismissed || []; updated = d.updated || ""; }
-    render();
+    if (live) {
+      const d = await J.list("mail", "meta");
+      items = new Map(Object.entries(d.mail).map(([id, m]) => [id, { id, ...m }]));
+      for (const m of [...items.values()]) {  // dismissed emails go away 3 days after you dismiss them
+        if (m.status === "denied" && Date.now() - (m.decidedAt || 0) > KEEP_DISMISSED) { items.delete(m.id); J.remove("mail/" + m.id).catch(() => {}); }
+      }
+      const t = d.meta.triage;
+      if (t?.updated) $("scan").textContent = `What each email says, with a plan whenever you ask. Last checked ${when(t.updated)}. Nothing is ever sent without you.`;
+    } else {
+      let topic = location.hash.slice(1);
+      try { if (!topic) topic = localStorage.getItem("jarvis-topic") || ""; } catch (e) {}
+      if (!/^[A-Za-z0-9_-]+$/.test(topic)) { $("list").innerHTML = `<p class="empty">Open this page from your HUD to see your mail.</p>`; return; }
+      const res = await fetch(`https://ntfy.sh/${topic.replace(/-hud$/, "")}-mail/json?poll=1&since=24h`, { cache: "no-store" });
+      const msgs = (await res.text()).trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((x) => x.event === "message");
+      const d = msgs.length ? JSON.parse(msgs[msgs.length - 1].message) : {};
+      items = new Map((d.flagged || []).map((m) => [m.id, m]));
+      say("This public copy is read-only. Open your private Jarvis site to act on these.");
+    }
+    render(); jump();
   } catch (e) {
-    $("list").innerHTML = `<p class="empty">Couldn't load your mail. Try again in a minute.</p>`;
+    if (!items.size) $("list").innerHTML = `<p class="empty">Couldn't load your mail. Try again in a minute.</p>`;
+    say(e.message);
   }
 }
-load(); setInterval(load, 15 * 60000);
-// Live updates: ntfy pushes each new post the moment it lands, so pages don't wait for the 15-minute poll
-function live(t, fn) {
-  if (!/^[A-Za-z0-9_-]+$/.test(t) || !window.EventSource) return;
-  new EventSource(`https://ntfy.sh/${t}/sse`).onmessage = (e) => { try { if (JSON.parse(e.data).event === "message") fn(); } catch (err) {} };
-}
-if (ok) live(topic.replace(/-hud$/, "") + "-mail", load);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+
+(async () => {
+  live = !!(await J.ping());
+  await load();
+  J.poll(load, live ? 15000 : 120000);
+})();
 </script>
 </body>
 </html>

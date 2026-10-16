@@ -105,6 +105,33 @@ textarea { width: 100%; min-height: 70px; font: 15px var(--display); color: var(
   justify-self: start; border: 1px solid var(--line); padding: 8px 14px; margin-bottom: 6px; }
 .back:hover { color: var(--arc); }
 a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc); }
+</style><style>
+.paper { background: var(--paper); color: var(--ink); padding: 22px 22px 26px; font-family: "Georgia", "Times New Roman", serif; font-size: 13px; line-height: 1.35; overflow-x: auto; }
+.paper .nm { text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 0.06em; }
+.paper .ct { text-align: center; font-size: 11.5px; color: #3c4a57; margin-bottom: 8px; }
+.paper h4 { margin: 10px 0 4px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid #9aa7b3; padding-bottom: 2px; }
+.paper .ent { margin-top: 5px; }
+.paper .ln { display: flex; justify-content: space-between; gap: 12px; }
+.paper .ln b { font-weight: 700; } .paper .ln i { color: #3c4a57; }
+.paper ul { margin: 2px 0 0; padding-left: 18px; }
+.paper .sk b { font-weight: 700; }
+.changes { margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; display: grid; gap: 3px; }
+.answers { display: grid; gap: 10px; }
+.answer { border-left: 2px solid var(--line); padding-left: 10px; display: grid; gap: 4px; }
+.answer b { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.answer p { margin: 0; font-size: 16px; line-height: 1.4; }
+.foot { text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; min-height: 1em; }
+.help { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 10px; }
+.help .drop { border: 1px dashed var(--line); padding: 14px; text-align: center; color: var(--muted); font-size: 14px; cursor: pointer; }
+.help .drop.over { border-color: var(--arc); color: var(--arc); }
+.help .thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.help .thumbs figure { margin: 0; position: relative; width: 96px; height: 64px; border: 1px solid var(--line); overflow: hidden; }
+.help .thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.help .thumbs button { position: absolute; top: 2px; right: 2px; font: 600 12px var(--mono); color: var(--text); background: var(--panel-solid); border: 1px solid var(--line); padding: 0 5px; cursor: pointer; }
+.help .advice { white-space: pre-wrap; font-size: 16px; line-height: 1.45; max-width: 70ch; border-left: 2px solid var(--arc); padding-left: 12px; margin: 0; }
+.help .advice-meta { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+textarea { box-sizing: border-box; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
@@ -133,142 +160,348 @@ a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc);
   </nav>
 
   <section class="list" id="list" aria-live="polite"><p class="empty">Loading internships…</p></section>
-  <p class="foot" id="foot">Apply and Deny open your Claude page, where your resume gets tailored</p>
+  <p class="foot" id="foot"></p>
 </main>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="jarvis.js"></script>
 <script>
-// Read-only list of the internship search, refreshed by every scan. Decisions and resume tailoring
-// happen on the private Claude page, so the resume never lands in this public repo.
-const CLAUDE = "https://claude.ai/artifact/VqWzcc7FFSFHTUTnWHy9gh";
+// Your internship search. On the private Jarvis site every button saves straight to your data store, and
+// resume tailoring and application help run on the site's quick AI. The public GitHub copy is read-only.
 const TABS = { new: ["new"], progress: ["tailoring", "review", "ready"], applied: ["applied", "interview", "offer", "rejected"], denied: ["denied"] };
 const LABEL = { new: "New", tailoring: "Tailoring", review: "Review resume", ready: "Ready to apply", applied: "Applied",
                 interview: "Interview", offer: "Offer", rejected: "Rejected", denied: "Denied" };
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const safeUrl = (u) => /^https:\/\//i.test(String(u || "")) ? String(u) : "";
-// "New today 11:15 AM" on listings that first reached the page today, so each scan's additions stand out
+const esc = J.esc, safeUrl = J.safeUrl;
 const today = (ms) => !!ms && new Date(ms).toDateString() === new Date().toDateString();
 const fresh = (j) => today(j.added) ? `<span class="fresh-tag" title="First added to this page today">New today ${esc(new Date(j.added).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }))}</span>` : "";
 const day = (ms) => ms ? new Date(ms).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
-let data = { jobs: [] }, tab = "new";
+const reqs = (r) => Array.isArray(r) ? r : typeof r === "string" ? r.split(/;\s*/).filter(Boolean) : [];
 
-// Return to the personal HUD: the link's hash, else the topic the HUD saved on this device.
-let topic = location.hash.slice(1);
-try { if (!topic) topic = localStorage.getItem("jarvis-topic") || ""; } catch (e) {}
-if (/^[A-Za-z0-9_-]+$/.test(topic)) $("back").href = "./#" + topic;
+let live = false;                       // true on the private site
+let jobs = new Map(), drafts = new Map(), helps = new Map(), meta = null, tab = "new";
+const busy = new Set();                 // job ids being tailored right now
+const open = new Set();                 // job ids whose resume preview is expanded
+const say = (t) => { $("foot").textContent = t || ""; };
+
 for (const b of document.querySelectorAll(".tab")) {
-  b.onclick = () => {
-    tab = b.dataset.tab;
-    for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t === b));
-    render();
-  };
+  b.onclick = () => { tab = b.dataset.tab; for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t === b)); render(); };
+}
+let sortBy = "posted", src = "all";
+try { sortBy = localStorage.getItem("intern-sort") === "odds" ? "odds" : "posted"; src = localStorage.getItem("intern-src") || "all"; } catch (e) {}
+const SOURCES = ["UNC board", "LinkedIn alert", "Handshake alert", "Simplify"];
+const byOrder = (a, b) => sortBy === "odds" ? (b.fit?.score ?? 0) - (a.fit?.score ?? 0) || (b.posted ?? 0) - (a.posted ?? 0) : (b.posted ?? 0) - (a.posted ?? 0);
+$("sort").value = sortBy;
+$("sort").onchange = (e) => { sortBy = e.target.value; try { localStorage.setItem("intern-sort", sortBy); } catch (err) {} render(); };
+$("src").onchange = (e) => { src = e.target.value; try { localStorage.setItem("intern-src", src); } catch (err) {} render(); };
+function fillSources(list) {
+  const seen = [...new Set(list.map((j) => j.source).filter(Boolean))];
+  const names = [...SOURCES.filter((s) => seen.includes(s)), ...seen.filter((s) => !SOURCES.includes(s)).sort()];
+  if (src !== "all" && !names.includes(src)) src = "all";
+  $("src").innerHTML = '<option value="all">All</option>' + names.map((s) => `<option>${esc(s)}</option>`).join("");
+  $("src").value = src;
 }
 
-// Requirements arrive as a list, or from some scans as one "a; b; c" string
-const reqs = (r) => Array.isArray(r) ? r : typeof r === "string" ? r.split(/;\s*/).filter(Boolean) : [];
+function counts() {
+  const c = { new: 0, progress: 0, applied: 0, denied: 0, interview: 0 };
+  for (const j of jobs.values()) {
+    for (const [t, sts] of Object.entries(TABS)) if (sts.includes(j.status || "new")) c[t]++;
+    if (j.status === "interview" || j.status === "offer") c.interview++;
+  }
+  return c;
+}
+
+function render() {
+  const c = counts();
+  for (const k of ["new", "progress", "applied", "interview"]) $("s-" + k).textContent = c[k];
+  for (const t of Object.keys(TABS)) $("n-" + t).textContent = c[t] || "";
+  if (meta?.lastRun) $("scan").textContent = `Summer 2027 and co-ops · data roles · US and remote · last searched ${
+    new Date(meta.lastRun).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
+  fillSources([...jobs.values()]);
+  // Keep half-typed notes and open help panels through re-renders
+  for (const ta of document.querySelectorAll("textarea[data-keep]")) keep.set(ta.dataset.keep, ta.value);
+  const shown = [...jobs.values()].filter((j) => TABS[tab].includes(j.status || "new") && (src === "all" || j.source === src))
+    .sort((a, b) => tab === "new" ? byOrder(a, b) || (b.score ?? 0) - (a.score ?? 0) : (b.updated ?? 0) - (a.updated ?? 0));
+  const list = $("list");
+  if (!shown.length) {
+    list.innerHTML = `<p class="empty">${{ new: "Nothing new to review. Jarvis checks again every few hours.", progress: "Nothing in progress. Tap Apply on a role to start.",
+      applied: "No applications yet.", denied: "Nothing denied." }[tab]}</p>`;
+    return;
+  }
+  list.innerHTML = shown.map(card).join("");
+  for (const ta of list.querySelectorAll("textarea[data-keep]")) ta.value = keep.get(ta.dataset.keep) || "";
+  for (const el of list.querySelectorAll("[data-act]")) el.onclick = () => act(el.dataset.act, el.dataset.id);
+  for (const el of list.querySelectorAll("select[data-id]")) el.onchange = () => setStatus(el.dataset.id, el.value);
+  for (const slot of list.querySelectorAll(".help-slot")) slot.replaceWith(helpPanel(jobs.get(slot.dataset.id)));
+}
+const keep = new Map();
+
 function card(j) {
   const d = j.details || {}, st = j.status || "new", url = safeUrl(j.url);
-  const facts = [
-    ["Role", d.role], ["Dates", d.dates || (j.terms || []).join(", ")], ["Pay", d.pay || "Not listed"],
-    ["Location", d.location || (j.locations || []).join(" · ")], ["Deadline", d.deadline], ["Source", j.source], ["Added", j.sheetAdded && `${j.sheetAdded} to the UNC sheet`],
-  ].filter(([, v]) => v);
-  const go = (label, cls) => `<a class="btn${cls}" href="${CLAUDE}#${esc(j.id)}" target="_blank" rel="noopener">${label}</a>`;
-  const actions = st === "new" ? go("Apply", " primary") + go("Deny", "") : go(st === "denied" ? "Restore" : "Open in Claude", "");
-  return `<article class="job">
-    <div class="co"><span>${esc(j.company)}</span><span class="co-meta">${fresh(j)}${j.fit ? `<span class="odds ${j.fit.score >= 7 ? "hi" : j.fit.score >= 5 ? "mid" : "lo"}" title="Estimated hire odds">Odds ${esc(j.fit.score)}/10</span>` : ""}${j.posted ? `<span class="posted">Posted ${esc(day(j.posted))}</span>` : ""}${
-      st !== "new" ? `<span class="status st-${esc(st)}">${esc(LABEL[st] || st)}</span>` : ""}</span></div>
+  const facts = [["Role", d.role], ["Dates", d.dates || (j.terms || []).join(", ")], ["Pay", d.pay || "Not listed"],
+    ["Location", d.location || (j.locations || []).join(" · ")], ["Deadline", d.deadline], ["Source", j.source],
+    ["Added", j.sheetAdded && `${j.sheetAdded} to the UNC sheet`]].filter(([, v]) => v);
+  let body = `
+    <div class="co"><span>${esc(j.company)}</span><span class="co-meta">${fresh(j)}${j.fit ? `<span class="odds ${j.fit.score >= 7 ? "hi" : j.fit.score >= 5 ? "mid" : "lo"}" title="Estimated hire odds">Odds ${esc(j.fit.score)}/10</span>` : ""}${
+      j.posted ? `<span class="posted">Posted ${esc(day(j.posted))}</span>` : ""}${st !== "new" ? `<span class="status st-${esc(st)}">${esc(LABEL[st] || st)}</span>` : ""}</span></div>
     <h3>${esc(j.title)}</h3>
     ${j.fit?.why ? `<p class="note">Odds: ${esc(j.fit.why)}</p>` : ""}
     ${j.news ? `<p class="note warn">${esc(day(j.news.at))}: ${esc(j.news.text)}</p>` : ""}
     <dl class="facts">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
     ${d.summary ? `<p class="summary">${esc(d.summary)}</p>` : `<p class="note">No description could be read from the posting. Open it to see the details.</p>`}
-    ${reqs(d.requirements).length ? `<ul class="reqs">${reqs(d.requirements).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
-    <div class="actions">${actions}${url ? `<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">View posting</a>` : ""}</div>
-  </article>`;
-}
-
-// Newest first, or best estimated odds first; the choice is remembered on this device
-let sortBy = "posted";
-try { sortBy = localStorage.getItem("intern-sort") || "posted"; } catch (e) {}
-if (sortBy !== "odds") sortBy = "posted";
-let src = "all";
-try { src = localStorage.getItem("intern-src") || "all"; } catch (e) {}
-// Source order: UNC board first, then the job alerts, then Simplify, then anything else
-const SOURCES = ["UNC board", "LinkedIn alert", "Handshake alert", "Simplify"];
-const byOrder = (a, b) => sortBy === "odds"
-  ? (b.fit?.score ?? 0) - (a.fit?.score ?? 0) || (b.posted ?? 0) - (a.posted ?? 0)
-  : (b.posted ?? 0) - (a.posted ?? 0);
-document.getElementById("sort").value = sortBy;
-const srcSel = document.getElementById("src");
-const fillSources = (list) => {
-  const seen = [...new Set(list.map((j) => j.source).filter(Boolean))];
-  const names = [...SOURCES.filter((s) => seen.includes(s)), ...seen.filter((s) => !SOURCES.includes(s)).sort()];
-  if (src !== "all" && !names.includes(src)) src = "all";
-  srcSel.innerHTML = '<option value="all">All</option>' + names.map((s) => `<option>${s.replace(/[<&]/g, "")}</option>`).join("");
-  srcSel.value = src;
-};
-srcSel.onchange = (e) => { src = e.target.value; try { localStorage.setItem("intern-src", src); } catch (err) {} render(); };
-document.getElementById("sort").onchange = (e) => {
-  sortBy = e.target.value;
-  try { localStorage.setItem("intern-sort", sortBy); } catch (err) {}
-  render();
-};
-
-function render() {
-  const c = { new: 0, progress: 0, applied: 0, denied: 0, interview: 0 };
-  for (const j of data.jobs) {
-    for (const [t, sts] of Object.entries(TABS)) if (sts.includes(j.status || "new")) c[t]++;
-    if (j.status === "interview" || j.status === "offer") c.interview++;
+    ${reqs(d.requirements).length ? `<ul class="reqs">${reqs(d.requirements).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}`;
+  const link = url ? `<a class="btn" href="${esc(url)}" target="_blank" rel="noopener">View posting</a>` : "";
+  if (!live) return `<article class="job" id="job-${esc(j.id)}">${body}<div class="actions">${link}</div></article>`;
+  const id = esc(j.id);
+  if (st === "new") {
+    body += `<div class="actions"><button class="btn primary" data-act="apply" data-id="${id}">Apply</button>
+      <button class="btn deny" data-act="deny" data-id="${id}">Deny</button>${link}</div>`;
+  } else if (st === "denied") {
+    body += `<div class="actions"><button class="btn" data-act="restore" data-id="${id}">Move back to review</button>${link}</div>`;
+  } else if (st === "tailoring") {
+    body += busy.has(j.id) ? `<p class="note warn">Tailoring your resume for this role…</p>`
+      : `<p class="note warn">Tailoring was interrupted.</p><div class="actions"><button class="btn primary" data-act="apply" data-id="${id}">Try again</button><button class="btn" data-act="restore" data-id="${id}">Cancel</button></div>`;
+  } else if (st === "review") {
+    const dr = drafts.get(j.id);
+    body += !dr ? `<p class="note">Loading the tailored resume…</p>` : `
+      <p class="note">Here's your resume tailored for this role. Approve it, or say what to change.</p>
+      ${(dr.changes || []).length ? `<ul class="changes">${dr.changes.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
+      ${paper(dr.resume)}
+      <label class="note" for="fb-${id}">What should change? (optional)</label>
+      <textarea id="fb-${id}" data-keep="fb-${id}" placeholder="e.g. lead with the NBA project, drop the drumline bullet"></textarea>
+      <div class="actions"><button class="btn primary" data-act="approve" data-id="${id}">Approve resume</button>
+        <button class="btn" data-act="redo" data-id="${id}">Redo with my notes</button>
+        <button class="btn deny" data-act="restore" data-id="${id}">Cancel</button></div>`;
+  } else if (st === "ready") {
+    const dr = drafts.get(j.id) || {}, ans = dr.answers || {};
+    body += `<p class="note">Resume approved. Download it, open the application, and submit. Then mark it applied.</p>
+      <div class="actions"><button class="btn primary" data-act="pdf" data-id="${id}">Download resume PDF</button>
+        ${link.replace("View posting", "Open application")}
+        <button class="btn" data-act="toggle" data-id="${id}">${open.has(j.id) ? "Hide resume" : "Show resume"}</button></div>
+      ${open.has(j.id) ? paper(dr.resume) : ""}
+      ${Object.keys(ans).length ? `<div class="answers">${Object.entries(ans).map(([q, a]) => `<div class="answer"><b>${esc(q)}</b><p>${esc(a)}</p></div>`).join("")}</div>` : ""}
+      <div class="actions"><button class="btn primary" data-act="applied" data-id="${id}">Mark applied</button>
+        <button class="btn" data-act="reopen" data-id="${id}">Edit resume again</button>
+        <button class="btn deny" data-act="deny" data-id="${id}">Decided not to apply</button></div>`;
+  } else {
+    body += `<div class="actions"><label class="note" for="s-${id}">Status</label>
+      <select id="s-${id}" data-id="${id}">${["applied", "interview", "offer", "rejected"].map((s) => `<option value="${s}" ${s === st ? "selected" : ""}>${LABEL[s]}</option>`).join("")}</select>
+      ${j.appliedAt ? `<span class="note">Applied ${esc(day(j.appliedAt))}</span>` : ""}
+      <button class="btn" data-act="pdf" data-id="${id}" ${drafts.has(j.id) ? "" : "disabled"}>Resume PDF</button>${link}</div>`;
   }
-  // Without the private feed every listing looks new, so the totals come from the public counts instead
-  for (const k of ["new", "progress", "applied", "interview"]) $("s-" + k).textContent = (data.mine ? c : data.counts || c)[k] ?? 0;
-  for (const t of Object.keys(TABS)) $("n-" + t).textContent = c[t] || "";
-  if (data.updated) $("scan").textContent = `Summer 2027 and co-ops · data roles · US and remote · last searched ${
-    new Date(data.updated).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
-  fillSources(data.jobs);
-  const shown = data.jobs.filter((j) => TABS[tab].includes(j.status || "new") && (src === "all" || j.source === src)).sort(byOrder);
-  $("list").innerHTML = shown.length ? shown.map(card).join("")
-    : `<p class="empty">${{ new: "Nothing new to review. Jarvis checks again every few hours.", progress: "Nothing in progress.",
-                           applied: "No applications yet.", denied: "Nothing denied." }[tab]}</p>`;
+  if (st !== "denied") body += `<div class="help-slot" data-id="${id}"></div>`;
+  return `<article class="job" id="job-${id}">${body}</article>`;
 }
 
-// Statuses, replies and older acted-on jobs aren't in the public jobs.json. They come through the HUD's
-// private ntfy feed, so they only show when this page is opened from Kyran's HUD link (or after it on this device).
-async function privateView() {
-  if (!/^[A-Za-z0-9_-]+$/.test(topic)) return null;
+function paper(r) {
+  if (!r) return "";
+  const ent = (e) => `<div class="ent"><div class="ln"><b>${esc(e.title)}</b><span>${esc(e.date)}</span></div>
+    ${e.org || e.location ? `<div class="ln"><i>${esc(e.org)}</i><i>${esc(e.location)}</i></div>` : ""}
+    ${(e.bullets || []).length ? `<ul>${e.bullets.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}</div>`;
+  return `<div class="paper"><div class="nm">${esc((r.name || "").toUpperCase())}</div><div class="ct">${esc((r.contact || []).join("  ·  "))}</div>
+    <h4>Education</h4>${(r.education || []).map((e) => ent({ ...e, title: e.school, org: e.degree, bullets: e.details })).join("")}
+    <h4>Skills</h4>${(r.skills || []).map((s) => `<div class="sk"><b>${esc(s.label)}:</b> ${esc(s.items)}</div>`).join("")}
+    ${(r.sections || []).map((s) => `<h4>${esc(s.title)}</h4>${(s.entries || []).map(ent).join("")}`).join("")}</div>`;
+}
+
+// Optimistic: the page changes at once, then the store catches up
+async function save(id, patch) {
+  const j = jobs.get(id), before = j && { ...j };
+  if (j) jobs.set(id, { ...j, ...patch });
+  render();
+  try { await J.save("jobs/" + id, { ...patch, updated: Date.now() }); say(""); }
+  catch (e) { if (before) jobs.set(id, before); render(); say("Couldn't save that change. " + e.message); }
+}
+const setStatus = (id, status) => save(id, { status, ...(status === "applied" ? { appliedAt: Date.now() } : {}) });
+
+async function act(what, id) {
+  const j = jobs.get(id);
+  if (!j) return;
+  if (what === "deny") return save(id, { status: "denied" });
+  if (what === "restore") return save(id, { status: "new" });
+  if (what === "approve") return save(id, { status: "ready" });
+  if (what === "reopen") return save(id, { status: "review" });
+  if (what === "applied") return save(id, { status: "applied", appliedAt: Date.now() });
+  if (what === "toggle") { open.has(id) ? open.delete(id) : open.add(id); return render(); }
+  if (what === "pdf") return pdf(j);
+  if (what === "apply" || what === "redo") return tailor(j, what === "redo" ? ($("fb-" + id)?.value || "").trim() : "");
+}
+
+async function tailor(j, notes) {
+  if (busy.has(j.id)) return;
+  busy.add(j.id);
+  await save(j.id, { status: "tailoring" });
   try {
-    const res = await fetch(`https://ntfy.sh/${topic.replace(/-hud$/, "")}-jobs/json?poll=1&since=24h`, { cache: "no-store" });
-    const msgs = (await res.text()).trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((m) => m.event === "message");
-    return msgs.length ? JSON.parse(msgs[msgs.length - 1].message) : null;
-  } catch (e) { return null; }
+    const out = await J.ai("tailor", { id: j.id, notes });
+    drafts.set(j.id, out.draft);
+    jobs.set(j.id, { id: j.id, ...out.doc });
+    keep.delete("fb-" + j.id);
+    tab = "progress";
+    for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t.dataset.tab === tab));
+    say("");
+  } catch (e) { say("Tailoring failed. " + e.message); }
+  busy.delete(j.id);
+  render();
+}
+
+function pdf(j) {
+  const dr = drafts.get(j.id);
+  if (!dr || !window.jspdf) return;
+  let doc;
+  for (const size of [10.5, 10, 9.5, 9, 8.5]) { doc = layout(dr.resume, size); if (doc.getNumberOfPages() === 1) break; }
+  doc.save(`${(dr.resume.name || "Resume").replace(/\s+/g, "_")}_${String(j.company).replace(/[^A-Za-z0-9]+/g, "_")}.pdf`);
+}
+
+function layout(r, fs) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  const W = doc.internal.pageSize.getWidth(), M = 40, R = W - M, lh = fs * 1.28;
+  let y = M + 6;
+  const text = (s, x, opts = {}) => doc.text(String(s || ""), x, y, opts);
+  const font = (style, size = fs) => { doc.setFont("helvetica", style); doc.setFontSize(size); };
+  const need = (h) => { if (y + h > doc.internal.pageSize.getHeight() - M) { doc.addPage(); y = M; } };
+  font("bold", fs + 7); text((r.name || "").toUpperCase(), W / 2, { align: "center" }); y += lh * 1.25;
+  font("normal", fs - 0.5); text((r.contact || []).join("   |   "), W / 2, { align: "center" }); y += lh * 0.9;
+  const heading = (t) => { need(lh * 2.2); y += lh * 0.45; font("bold", fs + 0.5); text(t.toUpperCase(), M); y += 3; doc.setLineWidth(0.6); doc.line(M, y, R, y); y += lh * 0.95; };
+  const bullets = (list) => {
+    font("normal");
+    for (const b of list || []) {
+      const lines = doc.splitTextToSize(String(b), R - M - 14);
+      need(lines.length * lh); text("•", M + 3);
+      lines.forEach((ln, i) => doc.text(ln, M + 14, y + i * lh)); y += lines.length * lh;
+    }
+  };
+  const entry = (e) => {
+    need(lh * 3);
+    font("bold"); text(e.title, M); if (e.date) text(e.date, R, { align: "right" }); y += lh;
+    if (e.org || e.location) { font("italic"); text(e.org, M); if (e.location) text(e.location, R, { align: "right" }); y += lh; }
+    bullets(e.bullets); y += lh * 0.25;
+  };
+  heading("Education");
+  for (const e of r.education || []) {
+    entry({ title: e.school, date: e.date, org: e.degree, location: e.location, bullets: [] });
+    font("normal");
+    for (const d of e.details || []) { const lines = doc.splitTextToSize(String(d), R - M); lines.forEach((ln, i) => doc.text(ln, M, y + i * lh)); y += lines.length * lh; }
+  }
+  heading("Skills");
+  for (const s of r.skills || []) {
+    font("bold"); const label = `${s.label}: `; text(label, M);
+    const lw = doc.getTextWidth(label); font("normal");
+    const lines = doc.splitTextToSize(String(s.items || ""), R - M - lw);
+    lines.forEach((ln, i) => doc.text(ln, M + lw, y + i * lh)); y += lines.length * lh;
+  }
+  for (const s of r.sections || []) { heading(s.title); (s.entries || []).forEach(entry); }
+  return doc;
+}
+
+// Application help: screenshots of the application plus a question; the answer is saved with the job
+const panels = new Map();   // job id -> { el, files, opened, busy }
+function helpPanel(j) {
+  let p = panels.get(j.id);
+  if (!p) { p = { el: document.createElement("section"), files: [], opened: false, busy: false }; p.el.className = "help"; panels.set(j.id, p); }
+  if (!p.busy) drawHelp(j, p);
+  return p.el;
+}
+function drawHelp(j, p) {
+  const saved = helps.get(j.id), q = p.el.querySelector("textarea")?.value || "";
+  if (!p.opened) {
+    p.el.innerHTML = `<div class="actions"><button class="btn" data-h="open">Get help with this application</button>${saved ? `<span class="note">Last advice ${esc(day(saved.at))}</span>` : ""}</div>`;
+    p.el.querySelector("[data-h=open]").onclick = () => { p.opened = true; drawHelp(j, p); };
+    return;
+  }
+  p.el.innerHTML = `<span class="advice-meta">Application help</span>
+    <div class="drop" tabindex="0" role="button">Drop screenshots here, tap to pick, or paste with Ctrl+V</div>
+    <input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+    <div class="thumbs"></div>
+    <textarea placeholder="What are you stuck on? (optional) e.g. what should I pick for How did you hear about us?"></textarea>
+    <div class="actions"><button class="btn primary" data-h="ask">Ask Jarvis</button><button class="btn" data-h="close">Close</button></div>
+    <p class="note warn" data-h="msg" hidden></p>
+    ${saved ? `<span class="advice-meta">Jarvis · ${esc(day(saved.at))}${saved.question ? " · " + esc(saved.question.slice(0, 80)) : ""}</span>` : ""}
+    <p class="advice" ${saved ? "" : "hidden"}>${esc(saved?.advice || "")}</p>`;
+  const ta = p.el.querySelector("textarea"); ta.value = q;
+  const msg = (t) => { const m = p.el.querySelector("[data-h=msg]"); m.hidden = !t; m.textContent = t || ""; };
+  const thumbs = p.el.querySelector(".thumbs");
+  const drawThumbs = () => {
+    thumbs.innerHTML = "";
+    p.files.forEach((f, i) => {
+      const fig = document.createElement("figure"), img = document.createElement("img"), x = document.createElement("button");
+      img.alt = "Screenshot " + (i + 1); img.src = URL.createObjectURL(f); x.textContent = "×"; x.title = "Remove";
+      x.onclick = () => { p.files.splice(i, 1); drawThumbs(); };
+      fig.append(img, x); thumbs.append(fig);
+    });
+  };
+  const add = (list) => {
+    for (const f of list) {
+      if (!/^image\/(png|jpeg|webp)$/.test(f.type)) continue;
+      if (f.size > 4e6) { msg("That screenshot is over 4 MB."); continue; }
+      if (p.files.length >= 4) { msg("Up to 4 screenshots at a time."); break; }
+      p.files.push(f);
+    }
+    drawThumbs();
+  };
+  const drop = p.el.querySelector(".drop"), input = p.el.querySelector("input[type=file]");
+  drop.onclick = () => input.click();
+  drop.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } };
+  input.onchange = () => { add(input.files); input.value = ""; };
+  drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+  drop.ondragleave = () => drop.classList.remove("over");
+  drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); add(e.dataTransfer.files); };
+  p.el.onpaste = (e) => { const fs = [...(e.clipboardData?.files || [])]; if (fs.length) { e.preventDefault(); add(fs); } };
+  drawThumbs();
+  p.el.querySelector("[data-h=close]").onclick = () => { p.opened = false; drawHelp(j, p); };
+  p.el.querySelector("[data-h=ask]").onclick = async () => {
+    const question = ta.value.trim();
+    if (!p.files.length && !question) return msg("Add a screenshot or a question first.");
+    const out = p.el.querySelector(".advice"), ask = p.el.querySelector("[data-h=ask]");
+    p.busy = true; ask.disabled = true; out.hidden = false; out.textContent = p.files.length ? "Reading your screenshots…" : "Thinking…"; msg("");
+    try {
+      const images = [];
+      for (const f of p.files) images.push(await J.upload(f));
+      const rec = await J.ai("help", { id: j.id, question, images });
+      helps.set(j.id, rec); p.files = []; ta.value = "";
+    } catch (e) { msg(e.message); }
+    p.busy = false; drawHelp(jobs.get(j.id) || j, p);
+  };
+}
+
+// Arriving with #job-id (from the HUD) opens that job's tab and scrolls to it, once
+let jumped = false;
+function jump() {
+  const id = decodeURIComponent(location.hash.slice(1)), j = jobs.get(id);
+  if (jumped || !j) return;
+  jumped = true;
+  const t = Object.keys(TABS).find((k) => TABS[k].includes(j.status || "new"));
+  document.querySelector(`.tab[data-tab="${t}"]`)?.click();
+  const el = $("job-" + id);
+  if (el) { el.scrollIntoView({ block: "start" }); el.style.borderColor = "var(--arc)"; }
 }
 
 async function load() {
+  if (busy.size || document.activeElement?.tagName === "TEXTAREA") return;  // don't redraw under your hands
   try {
-    const [res, mine] = await Promise.all([fetch("jobs.json", { cache: "no-store" }), privateView()]);
-    data = await res.json();
-    data.mine = !!mine;
-    if (mine) {
-      const have = new Set(data.jobs.map((j) => j.id));
-      data.jobs.push(...(mine.cards || []).filter((c) => !have.has(c.id)));
-      for (const j of data.jobs) {
-        const st = (mine.status || {})[j.id];
-        if (st) { j.status = st.s; if (st.n) j.news = { text: st.n, at: st.a }; }
-      }
+    if (live) {
+      const d = await J.list("jobs", "drafts", "help", "meta");
+      jobs = new Map(Object.entries(d.jobs).map(([id, j]) => [id, { id, ...j }]));
+      drafts = new Map(Object.entries(d.drafts));
+      helps = new Map(Object.entries(d.help));
+      meta = d.meta.search || null;
+    } else {
+      const d = await (await fetch("jobs.json", { cache: "no-store" })).json();
+      jobs = new Map((d.jobs || []).map((j) => [j.id, j]));
+      say("This public copy is read-only. Open your private Jarvis site to apply, deny or get help.");
     }
-    render();
+    render(); jump();
   } catch (e) {
-    $("list").innerHTML = `<p class="empty">Couldn't load the internship list. Try again in a minute.</p>`;
+    if (!jobs.size) $("list").innerHTML = `<p class="empty">Couldn't load the internship list. Try again in a minute.</p>`;
+    say(e.message);
   }
 }
-load(); setInterval(load, 15 * 60000);
-// Live updates: ntfy pushes each new post the moment it lands, so pages don't wait for the 15-minute poll
-function live(t, fn) {
-  if (!/^[A-Za-z0-9_-]+$/.test(t) || !window.EventSource) return;
-  new EventSource(`https://ntfy.sh/${t}/sse`).onmessage = (e) => { try { if (JSON.parse(e.data).event === "message") fn(); } catch (err) {} };
-}
-if (/^[A-Za-z0-9_-]+$/.test(topic)) live(topic.replace(/-hud$/, "") + "-jobs", load);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+
+(async () => {
+  live = !!(await J.ping());
+  await load();
+  J.poll(load, 30000);
+})();
 </script>
 </body>
 </html>

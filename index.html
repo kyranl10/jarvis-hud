@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* One site, one tab bar: the HUD, Mail and Internships pages each live in their own frame and keep
+/* One site, one tab bar: the HUD, Mail, Internships and Chat pages each live in their own frame and keep
    updating in the background, so switching tabs is instant. Single dark theme, like the pages it holds. */
 *,*::before,*::after { box-sizing: border-box; }
 :root {
@@ -28,15 +28,14 @@ nav {
 }
 nav::-webkit-scrollbar { display: none; }
 .brand { font-family: var(--mono); font-size: 12px; letter-spacing: 0.3em; color: var(--arc); margin-right: 10px; white-space: nowrap; }
-nav button, nav a {
+nav button {
   font: 600 15px/1 var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: none;
   border: 1px solid transparent; padding: 9px 12px; cursor: pointer; text-decoration: none; white-space: nowrap;
 }
-nav button:hover, nav a:hover { color: var(--text); }
+nav button:hover { color: var(--text); }
 nav button[aria-selected="true"] { color: var(--arc); border-color: var(--line); background: rgba(111, 227, 255, 0.08); }
-nav button:focus-visible, nav a:focus-visible { outline: 1px solid var(--arc); outline-offset: 1px; }
-nav a { margin-left: auto; }
-@media (max-width: 440px) { .brand { display: none; } nav { padding-inline: 10px; gap: 2px; } nav button, nav a { padding-inline: 9px; font-size: 14px; } }
+nav button:focus-visible { outline: 1px solid var(--arc); outline-offset: 1px; }
+@media (max-width: 440px) { .brand { display: none; } nav { padding-inline: 10px; gap: 2px; } nav button { padding-inline: 9px; font-size: 14px; } }
 main { flex: 1; position: relative; padding-bottom: env(safe-area-inset-bottom, 0px); }
 iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--void); }
 iframe[hidden] { display: none; }
@@ -48,11 +47,11 @@ iframe[hidden] { display: none; }
   <button type="button" role="tab" data-tab="hud">HUD</button>
   <button type="button" role="tab" data-tab="mail">Mail</button>
   <button type="button" role="tab" data-tab="internships">Internships</button>
-  <a href="https://claude.ai/artifact/QvAKoTAZQz4tg1QmeChgZt" target="_blank" rel="noopener">Chat ↗</a>
+  <button type="button" role="tab" data-tab="chat">Chat</button>
 </nav>
 <main id="frames"></main>
 <script>
-const TABS = { hud: "hud.html", mail: "mail.html", internships: "internships.html" };
+const TABS = { hud: "hud.html", mail: "mail.html", internships: "internships.html", chat: "chat.html" };
 const ok = (t) => /^[A-Za-z0-9_-]+$/.test(t);
 
 // The private key after # unlocks the data; the HUD saves it on this device, so a bare address works after the first visit

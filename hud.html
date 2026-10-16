@@ -166,7 +166,7 @@ body {
 
   <button class="speak" id="speak" type="button" aria-pressed="false"><span class="dot"></span><span id="speak-label">Brief me</span></button>
 
-  <a class="comms" id="comms" href="https://claude.ai/artifact/QvAKoTAZQz4tg1QmeChgZt" target="_blank" rel="noopener" aria-label="Talk to Jarvis">
+  <a class="comms" id="comms" href="chat.html" aria-label="Talk to Jarvis">
     <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8M8 13h5"/></svg></span>
     <span><b>Talk to Jarvis</b><span>Chat or send a screenshot to add it to your calendar</span></span>
     <i aria-hidden="true">›</i>
@@ -230,6 +230,7 @@ body {
   <p class="foot"><span id="foot"></span> <button class="sync" id="sync" type="button">Sync</button></p>
 </main>
 
+<script src="jarvis.js"></script>
 <script>
 const hoursFromNow = (h) => new Date(Math.round(Date.now() / 3600e3 + h) * 3600e3).toISOString();
 const DEMO = {
@@ -546,8 +547,6 @@ function showHealth() {
 }
 setInterval(showHealth, 60000);
 
-// Jarvis Mail: the full email and a recommended plan for each item (private page; no email content lives here)
-const MAIL_PAGE = "https://claude.ai/artifact/5X4Lud3fnsAa4qAyRYUrre";
 
 // The Messages panel: one list of at most 5 one-line rows. Flagged "Act" emails first, then other flagged
 // emails, then the last 24 hours (emails already flagged are dropped). Anything past 5 is a "+N more" link.
@@ -569,6 +568,7 @@ function drawMessages() {
 
 // Emails Jarvis judged worth your attention, from the "-mail" side topic. Hidden until the first triage run.
 async function loadMail() {
+  if (await J.ping()) return loadMailPrivate();
   const topic = location.hash.slice(1);
   if (!/^[A-Za-z0-9_-]+$/.test(topic)) return;
   try {
@@ -580,7 +580,22 @@ async function loadMail() {
     $("mail-note").textContent = d.updated ? `checked ${dayName(d.updated).toLowerCase()} ${clock(d.updated)}` : "";
     const fl = (d.flagged || []).slice().sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0));
     mailItems = fl.map((m) => ({ hot: m.level === "act", k: m.level === "act" ? "Act" : "FYI", t: m.subject,
-      u: safe(m.url) || MAIL_PAGE + (m.id ? "#" + encodeURIComponent(m.id) : "") }));
+      u: safe(m.url) || "mail.html" }));
+    drawMessages();
+  } catch (e) {}
+}
+
+// On your private site the Messages panel reads the mail store itself, so a Dismiss or Restore shows here at once
+async function loadMailPrivate() {
+  try {
+    const d = await J.list("mail", "meta");
+    const t = d.meta.triage;
+    if (t?.updated) { health.triage = Date.parse(t.updated) || 0; showHealth(); $("mail-note").textContent = `checked ${dayName(t.updated).toLowerCase()} ${clock(t.updated)}`; }
+    const open = Object.entries(d.mail).map(([id, m]) => ({ id, ...m }))
+      .filter((m) => ["open", "needs_you", "working"].includes(m.status || "open") && (m.level === "act" || m.level === "fyi" || m.status === "needs_you"))
+      .sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0));
+    mailItems = open.map((m) => ({ hot: m.level === "act" || m.status === "needs_you", k: m.status === "needs_you" ? "You" : m.level === "act" ? "Act" : "FYI",
+      t: m.subject, u: safe(m.url) }));
     drawMessages();
   } catch (e) {}
 }
@@ -597,6 +612,7 @@ async function loadJobsAge() {
   } catch (e) {}
 }
 async function loadIntern() {
+  if (await J.ping()) return loadInternPrivate();
   try {
     const res = await fetch("intern.json", { cache: "no-store" });
     if (!res.ok) throw new Error(res.status);
@@ -614,6 +630,30 @@ async function loadIntern() {
   } catch (e) {
     $("intern-stats").innerHTML = `<p class="empty">Waiting for the first scan.</p>`;
   }
+}
+
+// Private site: counts and news straight from the store, so marking a job applied shows here right away
+async function loadInternPrivate() {
+  try {
+    const d = await J.list("jobs", "meta"), jobs = Object.entries(d.jobs).map(([id, j]) => ({ id, ...j })), s = d.meta.search || {};
+    const c = { new: 0, progress: 0, applied: 0, interview: 0 };
+    for (const j of jobs) {
+      const st = j.status || "new";
+      if (st === "new") c.new++; else if (["tailoring", "review", "ready"].includes(st)) c.progress++;
+      else if (["applied", "interview", "offer", "rejected"].includes(st)) c.applied++;
+      if (st === "interview" || st === "offer") c.interview++;
+    }
+    health.intern = s.lastRun || 0; showHealth();
+    $("intern-scan").textContent = `${s.matched ?? jobs.length} matches · scanned ${s.lastRun ? dayName(new Date(s.lastRun).toISOString()).toLowerCase() + " " + clock(new Date(s.lastRun).toISOString()) : "—"}`;
+    $("intern-stats").innerHTML = [["To review", c.new], ["In progress", c.progress], ["Applied", c.applied], ["Interviews", c.interview]]
+      .map(([k, v]) => `<div><b>${esc(v)}</b><i>${esc(k)}</i></div>`).join("");
+    const week = Date.now() - 7 * 86400e3;
+    $("intern-news").innerHTML = jobs.filter((j) => j.news && j.news.at > week).sort((a, b) => b.news.at - a.news.at).slice(0, 3).map((j) =>
+      `<li class="row due hot"><span class="k">${esc(dayName(new Date(j.news.at).toISOString()))}</span><span class="v">${esc(j.company)}<span>${esc(j.news.text)}</span></span></li>`).join("");
+    const fresh = jobs.filter((j) => (j.status || "new") === "new" && j.added && Date.now() - j.added < 86400e3).sort((a, b) => (b.fit?.score ?? 0) - (a.fit?.score ?? 0)).slice(0, 3);
+    $("intern-new").innerHTML = fresh.map((j) =>
+      `<li class="row"><span class="k">${esc(j.posted ? new Date(j.posted).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "New")}</span><span class="v">${esc(j.company)}<span>${esc(j.title)}</span></span></li>`).join("");
+  } catch (e) {}
 }
 
 // Live conditions straight from Open-Meteo (free, no key), refreshed every minute. Same fields as weather.py.
@@ -660,6 +700,11 @@ try { const saved = localStorage.getItem("jarvis-topic"); if (location.hash.leng
 $("intern-link").href = "internships.html" + location.hash;
 $("mail-link").href = "mail.html" + location.hash;  // the GitHub Mail page, read from the same private feed
 $("speak").addEventListener("click", speak);
+J.ping().then((p) => {
+  if (!p) return;
+  const c = $("comms"); c.href = "chat.html"; c.removeAttribute("target");
+  J.poll(() => { loadMail(); loadIntern(); }, 30000);
+});
 loadIntern(); setInterval(loadIntern, 15 * 60000);
 loadWeather(); setInterval(loadWeather, 60000);
 if ("speechSynthesis" in window) speechSynthesis.getVoices();
