@@ -291,7 +291,8 @@ function card(j) {
     body += `<div class="actions"><label class="note" for="s-${id}">Status</label>
       <select id="s-${id}" data-id="${id}">${["applied", "interview", "offer", "rejected"].map((s) => `<option value="${s}" ${s === st ? "selected" : ""}>${LABEL[s]}</option>`).join("")}</select>
       ${j.appliedAt ? `<span class="note">Applied ${esc(day(j.appliedAt))}</span>` : ""}
-      <button class="btn" data-act="pdf" data-id="${id}" ${drafts.has(j.id) ? "" : "disabled"}>Resume PDF</button>${link}</div>`;
+      <button class="btn" data-act="pdf" data-id="${id}" ${drafts.has(j.id) ? "" : "disabled"}>Resume PDF</button>${link}
+      <button class="btn" data-act="unapply" data-id="${id}">Move back to In progress</button></div>`;
   }
   if (st !== "denied") body += `<div class="help-slot" data-id="${id}"></div>`;
   return `<article class="job" id="job-${id}">${body}</article>`;
@@ -326,6 +327,7 @@ async function act(what, id) {
   if (what === "approve") return save(id, { status: "ready" });
   if (what === "reopen") return save(id, { status: "review" });
   if (what === "applied") return save(id, { status: "applied", appliedAt: Date.now() });
+  if (what === "unapply") { await save(id, { status: "ready", appliedAt: null }); return say("Moved back to In progress."); }
   if (what === "toggle") { open.has(id) ? open.delete(id) : open.add(id); return render(); }
   if (what === "pdf") return pdf(j);
   if (what === "apply" || what === "redo") return tailor(j, what === "redo" ? ($("fb-" + id)?.value || "").trim() : "");
