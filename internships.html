@@ -86,6 +86,7 @@ header p { margin: 0; color: var(--muted); font-size: 15px; }
 .st-rejected, .st-denied { color: var(--alert); }
 
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.status-row { margin-top: 4px; }
 button.btn, a.btn {
   font: 600 13px var(--display); letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none;
   color: var(--arc); background: transparent; border: 1px solid var(--line); padding: 9px 14px; cursor: pointer;
@@ -175,6 +176,9 @@ textarea { box-sizing: border-box; }
 const TABS = { new: ["new"], progress: ["tailoring", "review", "ready"], applied: ["applied", "interview", "offer"], rejected: ["rejected"], denied: ["denied"] };
 const LABEL = { new: "New", tailoring: "Tailoring", review: "Review resume", ready: "Ready to apply", applied: "Applied",
                 interview: "Interview", offer: "Offer", rejected: "Rejected", denied: "Denied" };
+const MOVES = ["new", "review", "ready", "applied", "interview", "offer", "rejected", "denied"];
+const MOVE_LABEL = { new: "To review", review: "In progress: review resume", ready: "In progress: ready to apply" };
+const TAB_NAME = { new: "To review", progress: "In progress", applied: "Applied", rejected: "Rejected", denied: "Denied" };
 const $ = (id) => document.getElementById(id);
 const esc = J.esc, safeUrl = J.safeUrl;
 const today = (ms) => !!ms && new Date(ms).toDateString() === new Date().toDateString();
@@ -290,12 +294,13 @@ function card(j) {
         <button class="btn" data-act="reopen" data-id="${id}">Edit resume again</button>
         <button class="btn deny" data-act="deny" data-id="${id}">Decided not to apply</button></div>`;
   } else {
-    body += `<div class="actions"><label class="note" for="s-${id}">Status</label>
-      <select id="s-${id}" data-id="${id}">${["applied", "interview", "offer", "rejected"].map((s) => `<option value="${s}" ${s === st ? "selected" : ""}>${LABEL[s]}</option>`).join("")}</select>
-      ${j.appliedAt ? `<span class="note">Applied ${esc(day(j.appliedAt))}</span>` : ""}
+    body += `<div class="actions">${j.appliedAt ? `<span class="note">Applied ${esc(day(j.appliedAt))}</span>` : ""}
       <button class="btn" data-act="pdf" data-id="${id}" ${drafts.has(j.id) ? "" : "disabled"}>Resume PDF</button>${link}
       <button class="btn" data-act="unapply" data-id="${id}">Move back to In progress</button></div>`;
   }
+  // Every card can be moved anywhere; resume steps need a tailored resume first
+  if (st !== "tailoring") body += `<div class="actions status-row"><label class="note" for="s-${id}">Status</label>
+    <select id="s-${id}" data-id="${id}">${MOVES.map((v) => `<option value="${v}" ${v === st ? "selected" : ""} ${(v === "review" || v === "ready") && !drafts.has(j.id) ? "disabled" : ""}>${MOVE_LABEL[v] || LABEL[v]}</option>`).join("")}</select></div>`;
   if (st !== "denied") body += `<div class="help-slot" data-id="${id}"></div>`;
   return `<article class="job" id="job-${id}">${body}</article>`;
 }
@@ -319,7 +324,12 @@ async function save(id, patch) {
   try { await J.save("jobs/" + id, { ...patch, updated: Date.now() }); say(""); }
   catch (e) { if (before) jobs.set(id, before); render(); say("Couldn't save that change. " + e.message); }
 }
-const setStatus = (id, status) => save(id, { status, ...(status === "applied" ? { appliedAt: Date.now() } : {}) });
+async function setStatus(id, status) {
+  const j = jobs.get(id), sent = ["applied", "interview", "offer", "rejected"].includes(status);
+  await save(id, { status, ...(sent && !j?.appliedAt ? { appliedAt: Date.now() } : {}), ...(status === "new" || status === "review" || status === "ready" ? { appliedAt: null } : {}) });
+  const t = Object.keys(TABS).find((k) => TABS[k].includes(status));
+  say(`Moved to ${TAB_NAME[t]}.`);
+}
 
 async function act(what, id) {
   const j = jobs.get(id);
