@@ -124,7 +124,7 @@ body {
 .comms span { display: block; font-size: 15px; color: var(--muted); margin-top: 2px; }
 .comms i { font-style: normal; font-family: var(--mono); font-size: 18px; color: var(--arc); }
 
-.health { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin: -6px 0 2px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.health { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin: 20px 0 4px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .health span b { font-weight: 500; color: var(--arc-dim); margin-right: 5px; }
 .health .stale, .health .stale b { color: var(--alert); }
 .foot { text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
@@ -161,8 +161,6 @@ body {
     <h1 id="greeting">Good morning, sir.</h1>
     <p id="summary">Bringing systems online.</p>
   </section>
-
-  <p class="health" id="health" hidden aria-label="When each source last updated"></p>
 
   <button class="speak" id="speak" type="button" aria-pressed="false"><span class="dot"></span><span id="speak-label">Brief me</span></button>
 
@@ -227,6 +225,7 @@ body {
     <ul class="rows" id="games"></ul>
   </section>
 
+  <p class="health" id="health" hidden aria-label="When each source last updated"></p>
   <p class="foot"><span id="foot"></span> <button class="sync" id="sync" type="button">Sync</button></p>
 </main>
 
