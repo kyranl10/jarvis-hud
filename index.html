@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-title" content="Jarvis">
 <meta name="theme-color" content="#04080d">
 <title>Jarvis</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
@@ -60,6 +63,28 @@ try { if (!ok(topic)) topic = localStorage.getItem("jarvis-topic") || ""; } catc
 if (ok(topic) && location.hash.length < 2) history.replaceState(null, "", "#" + topic);
 const frames = {};
 
+// The home-screen app has its own storage, separate from Safari's, so the key is also kept in the private store
+// (meta/device): a device that knows it saves it there once, and one that doesn't reads it back after unlocking.
+async function syncTopic() {
+  try {
+    if (ok(topic)) {
+      if (localStorage.getItem("jarvis-topic-saved") === topic) return;
+      const res = await fetch("/api/save", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: "meta/device", patch: { topic } }) });
+      if (res.ok) localStorage.setItem("jarvis-topic-saved", topic);
+      return;
+    }
+    const res = await fetch("/api/list?c=meta", { cache: "no-store" });
+    const saved = res.ok ? (await res.json()).meta?.device?.topic : "";
+    if (!ok(saved || "")) return;
+    topic = saved;
+    localStorage.setItem("jarvis-topic", topic);
+    localStorage.setItem("jarvis-topic-saved", topic);
+    history.replaceState(null, "", "#" + topic);
+    for (const [t, f] of Object.entries(frames)) f.src = TABS[t] + "#" + topic;
+  } catch (e) {}
+}
+
 // Same-origin frames, so the shell can tidy them: hide each page's own "back to HUD" button and
 // turn links between the pages into tab switches instead of loading a page inside a page.
 function adopt(f) {
@@ -101,6 +126,7 @@ for (const b of document.querySelectorAll("nav button")) b.onclick = () => show(
 let start = new URLSearchParams(location.search).get("tab");
 try { if (!TABS[start]) start = localStorage.getItem("jarvis-tab"); } catch (e) {}
 show(start || "hud");
+syncTopic();
 </script>
 </body>
 </html>

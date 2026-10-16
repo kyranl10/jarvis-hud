@@ -26,6 +26,8 @@ function cookie(request, name) {
 const page = (note) => new Response(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#04080d"><title>Jarvis</title>
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Jarvis">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <style>
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:#04080d;color:#d7f6ff;font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;color-scheme:dark}
@@ -64,7 +66,9 @@ export async function onRequest({ request, env, next }) {
     } });
   }
 
-  if (!same(cookie(request, COOKIE), want)) return page("");
+  // The app icon and manifest hold nothing private (they're in this public repo), and phones fetch them without the cookie
+  const open = url.pathname === "/manifest.webmanifest" || url.pathname.startsWith("/icons/");
+  if (!open && !same(cookie(request, COOKIE), want)) return page("");
   const res = await next();
   const out = new Response(res.body, res);
   out.headers.set("Cache-Control", "no-store");
