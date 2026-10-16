@@ -1,5 +1,5 @@
 // Cloudflare Pages only (GitHub Pages ignores this folder): every request needs the site password.
-// The password lives in the Pages project's SITE_PASSWORD variable, never in this public repo.
+// The password lives in the Pages project's SITE_PASSWORD secret (Settings > Variables and secrets), never in this public repo.
 // A correct password sets a year-long cookie holding a hash of it, so changing the password signs every device out.
 const COOKIE = "jarvis_auth";
 
