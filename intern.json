@@ -1,8 +1,8 @@
 {
- "updated": 1792131728731,
- "matched": 555,
+ "updated": 1792166973851,
+ "matched": 559,
  "counts": {
-  "new": 68,
+  "new": 67,
   "progress": 2,
   "applied": 2,
   "interview": 1,
@@ -20,6 +20,11 @@
  ],
  "fresh": [
   {
+   "company": "Nutanix",
+   "title": "Support Analytics & Operations Intern",
+   "posted": 1792159570000
+  },
+  {
    "company": "WebstaurantStore",
    "title": "Data Science Summer Intern",
    "posted": 1792087562000
@@ -28,11 +33,6 @@
    "company": "Nissan Motor Corporation",
    "title": "Data Science Intern - Summer 2027 - Franklin, TN",
    "posted": 1792087562000
-  },
-  {
-   "company": "MetLife",
-   "title": "METx D&A Intern",
-   "posted": 1792076432000
   }
  ]
 }
