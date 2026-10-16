@@ -157,6 +157,7 @@ textarea { box-sizing: border-box; }
     <button class="tab" role="tab" data-tab="new" aria-selected="true">To review<span class="n" id="n-new"></span></button>
     <button class="tab" role="tab" data-tab="progress" aria-selected="false">In progress<span class="n" id="n-progress"></span></button>
     <button class="tab" role="tab" data-tab="applied" aria-selected="false">Applied<span class="n" id="n-applied"></span></button>
+    <button class="tab" role="tab" data-tab="rejected" aria-selected="false">Rejected<span class="n" id="n-rejected"></span></button>
     <button class="tab" role="tab" data-tab="denied" aria-selected="false">Denied<span class="n" id="n-denied"></span></button>
     <label class="sort">Sort <select id="sort"><option value="posted">Newest</option><option value="odds">Best odds</option></select></label>
     <label class="sort src">Source <select id="src"><option value="all">All</option></select></label>
@@ -171,7 +172,7 @@ textarea { box-sizing: border-box; }
 <script>
 // Your internship search. On the private Jarvis site every button saves straight to your data store, and
 // resume tailoring and application help run on the site's quick AI. The public GitHub copy is read-only.
-const TABS = { new: ["new"], progress: ["tailoring", "review", "ready"], applied: ["applied", "interview", "offer", "rejected"], denied: ["denied"] };
+const TABS = { new: ["new"], progress: ["tailoring", "review", "ready"], applied: ["applied", "interview", "offer"], rejected: ["rejected"], denied: ["denied"] };
 const LABEL = { new: "New", tailoring: "Tailoring", review: "Review resume", ready: "Ready to apply", applied: "Applied",
                 interview: "Interview", offer: "Offer", rejected: "Rejected", denied: "Denied" };
 const $ = (id) => document.getElementById(id);
@@ -207,7 +208,7 @@ function fillSources(list) {
 }
 
 function counts() {
-  const c = { new: 0, progress: 0, applied: 0, denied: 0, interview: 0 };
+  const c = { new: 0, progress: 0, applied: 0, rejected: 0, denied: 0, interview: 0 };
   for (const j of jobs.values()) {
     for (const [t, sts] of Object.entries(TABS)) if (sts.includes(j.status || "new")) c[t]++;
     if (j.status === "interview" || j.status === "offer") c.interview++;
@@ -217,7 +218,8 @@ function counts() {
 
 function render() {
   const c = counts();
-  for (const k of ["new", "progress", "applied", "interview"]) $("s-" + k).textContent = c[k];
+  for (const k of ["new", "progress", "interview"]) $("s-" + k).textContent = c[k];
+  $("s-applied").textContent = c.applied + c.rejected;  // every application you sent, including ones that were turned down
   for (const t of Object.keys(TABS)) $("n-" + t).textContent = c[t] || "";
   if (meta?.lastRun) $("scan").textContent = `Summer 2027 and co-ops · data roles · US and remote · last searched ${
     new Date(meta.lastRun).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`;
@@ -229,7 +231,7 @@ function render() {
   const list = $("list");
   if (!shown.length) {
     list.innerHTML = `<p class="empty">${{ new: "Nothing new to review. Jarvis checks again every few hours.", progress: "Nothing in progress. Tap Apply on a role to start.",
-      applied: "No applications yet.", denied: "Nothing denied." }[tab]}</p>`;
+      applied: "No open applications.", rejected: "No rejections. Keep going.", denied: "Nothing denied." }[tab]}</p>`;
     return;
   }
   list.innerHTML = shown.map(card).join("");
