@@ -228,10 +228,10 @@ function card(m) {
     h += `<label class="note" for="r-${id}">${p ? "Your input (optional for Approve)" : "Want Jarvis to do something with this? (optional for a plan)"}</label>
       <textarea id="r-${id}" data-id="${id}" placeholder="${p ? "e.g. make the email shorter, mention my VenueHorn work" : "e.g. draft a reply saying I'll be there"}"></textarea>
       <div class="actions">
-        ${p ? `<button class="btn primary" data-act="approve" data-id="${id}">Approve plan</button><button class="btn" data-act="plan" data-id="${id}" ${thinking ? "disabled" : ""}>Redo plan</button>`
+        ${p ? `<button class="btn primary" data-act="approve" data-id="${id}">Approve plan</button><button class="btn" data-act="plan" data-id="${id}" ${thinking ? "disabled" : ""}>Redo plan</button><button class="btn" data-act="unplan" data-id="${id}">Clear plan</button>`
             : `<button class="btn primary" data-act="plan" data-id="${id}" ${thinking ? "disabled" : ""}>${thinking ? "Planning…" : "Give me a plan"}</button>`}
         <button class="btn" data-act="respond" data-id="${id}">${p ? "Send my input" : "Ask Jarvis"}</button>
-        <button class="btn deny" data-act="deny" data-id="${id}">${p ? "Deny" : "Dismiss"}</button></div>`;
+        <button class="btn deny" data-act="deny" data-id="${id}">Dismiss</button></div>`;
   } else if (st === "denied") {
     const clears = new Date((m.decidedAt || Date.now()) + KEEP_DISMISSED).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
     h += `<div class="actions"><button class="btn primary" data-act="reopen" data-id="${id}">Restore</button><span class="clears">Clears ${esc(clears)}</span></div>`;
@@ -256,6 +256,7 @@ async function act(what, id) {
   const note = ($("r-" + id)?.value || "").trim();
   if (what === "deny") { keep.delete(id); return save(id, { status: "denied", decision: "deny", note, decidedAt: Date.now() }); }
   if (what === "reopen") return save(id, { status: "open", decision: null, note: "", result: "", links: [] });
+  if (what === "unplan") { keep.delete(id); if (await save(id, { plan: null, plannedAt: null, note: "" })) { follow(id); say("Plan cleared."); } return; }
   if (what === "plan") {
     busy.add(id); render(); say("Jarvis is making a plan…");
     try {
