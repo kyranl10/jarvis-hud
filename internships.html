@@ -120,7 +120,10 @@ a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc);
 .answer { border-left: 2px solid var(--line); padding-left: 10px; display: grid; gap: 4px; }
 .answer b { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
 .answer p { margin: 0; font-size: 16px; line-height: 1.4; }
-.foot { text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; min-height: 1em; }
+.foot { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); transform: translateX(-50%); z-index: 20;
+  width: max-content; max-width: calc(100% - 32px); margin: 0; padding: 10px 16px; text-align: center; font-family: var(--mono); font-size: 12px;
+  letter-spacing: 0.08em; line-height: 1.4; color: var(--text); background: rgba(4, 8, 13, 0.96); border: 1px solid var(--arc); }
+.foot:empty { display: none; }
 .help { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 10px; }
 .help .drop { border: 1px dashed var(--line); padding: 14px; text-align: center; color: var(--muted); font-size: 14px; cursor: pointer; }
 .help .drop.over { border-color: var(--arc); color: var(--arc); }
@@ -182,7 +185,8 @@ let live = false;                       // true on the private site
 let jobs = new Map(), drafts = new Map(), helps = new Map(), meta = null, tab = "new";
 const busy = new Set();                 // job ids being tailored right now
 const open = new Set();                 // job ids whose resume preview is expanded
-const say = (t) => { $("foot").textContent = t || ""; };
+let sayTimer;
+const say = (t) => { $("foot").textContent = t || ""; clearTimeout(sayTimer); if (t) sayTimer = setTimeout(() => { $("foot").textContent = ""; }, 9000); };
 
 for (const b of document.querySelectorAll(".tab")) {
   b.onclick = () => { tab = b.dataset.tab; for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t === b)); render(); };
@@ -331,6 +335,7 @@ async function tailor(j, notes) {
   if (busy.has(j.id)) return;
   busy.add(j.id);
   await save(j.id, { status: "tailoring" });
+  say("Jarvis is tailoring your resume…");
   try {
     const out = await J.ai("tailor", { id: j.id, notes });
     drafts.set(j.id, out.draft);
@@ -338,7 +343,7 @@ async function tailor(j, notes) {
     keep.delete("fb-" + j.id);
     tab = "progress";
     for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t.dataset.tab === tab));
-    say("");
+    say("Resume ready under In progress.");
   } catch (e) { say("Tailoring failed. " + e.message); }
   busy.delete(j.id);
   render();

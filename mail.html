@@ -130,7 +130,10 @@ textarea { box-sizing: border-box; width: 100%; min-height: 70px; font: 15px var
 button.btn.primary, a.btn.primary { background: rgba(111, 227, 255, 0.14); border-color: var(--arc); }
 button.btn.deny { color: var(--alert); border-color: rgba(255, 107, 91, 0.35); }
 button.btn:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
-.foot { text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; min-height: 1em; }
+.foot { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); transform: translateX(-50%); z-index: 20;
+  width: max-content; max-width: calc(100% - 32px); margin: 0; padding: 10px 16px; text-align: center; font-family: var(--mono); font-size: 12px;
+  letter-spacing: 0.08em; line-height: 1.4; color: var(--text); background: rgba(4, 8, 13, 0.96); border: 1px solid var(--arc); }
+.foot:empty { display: none; }
 .job.focus { border-color: var(--arc); }
 </style>
 </head>
@@ -161,7 +164,8 @@ const STATUS = { working: "Jarvis is on it", done: "Done", denied: "Dismissed", 
 const $ = (id) => document.getElementById(id);
 const esc = J.esc, safeUrl = J.safeUrl;
 const when = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
-const say = (t) => { $("foot").textContent = t || ""; };
+let sayTimer;
+const say = (t) => { $("foot").textContent = t || ""; clearTimeout(sayTimer); if (t) sayTimer = setTimeout(() => { $("foot").textContent = ""; }, 9000); };
 let live = false, items = new Map(), tab = "needs";
 const open = new Set(), keep = new Map(), busy = new Set();
 
@@ -253,8 +257,11 @@ async function act(what, id) {
   if (what === "deny") { keep.delete(id); return save(id, { status: "denied", decision: "deny", note, decidedAt: Date.now() }); }
   if (what === "reopen") return save(id, { status: "open", decision: null, note: "", result: "", links: [] });
   if (what === "plan") {
-    busy.add(id); render();
-    try { const out = await J.ai("plan", { id, note }); items.set(id, { id, ...out.doc }); keep.delete(id); say(""); }
+    busy.add(id); render(); say("Jarvis is making a plan…");
+    try {
+      const out = await J.ai("plan", { id, note }); items.set(id, { id, ...out.doc }); keep.delete(id);
+      busy.delete(id); follow(id); say("Plan ready.");
+    }
     catch (e) { say("Couldn't make a plan. " + e.message); }
     busy.delete(id); return render();
   }
@@ -265,6 +272,14 @@ async function act(what, id) {
     const w = await J.wake("Mail request: " + id);
     if (!w.woke) say("Saved. Jarvis will pick this up on its next scheduled run.");
   }
+}
+
+// After a plan the card can move to Needs you: follow it there so the result is on screen
+function follow(id) {
+  const m = items.get(id);
+  if (!m) return;
+  document.querySelector(`.tab[data-tab="${bucket(m)}"]`)?.click();
+  requestAnimationFrame(() => $("m-" + id)?.scrollIntoView({ block: "start", behavior: "smooth" }));
 }
 
 let jumped = false;
