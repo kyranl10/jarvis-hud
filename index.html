@@ -98,6 +98,7 @@ body {
 .panel h2 + .sub, .panel h2 + .sub[hidden] + .rows[hidden] + .sub { margin-top: 0; }
 
 .row.due .k { color: var(--gold); }
+.row.one .v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .row.due.hot .k { color: var(--alert); }
 .res-W { color: var(--arc); } .res-L { color: var(--alert); } .res-D { color: var(--muted); }
 .tminus { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; padding: 1px 6px; border: 1px solid currentColor; margin-left: 8px; vertical-align: 2px; }
@@ -193,12 +194,9 @@ body {
 
   <section class="panel" aria-labelledby="h-mail">
     <h2 id="h-mail">Messages <small id="mail-note"></small></h2>
-    <h3 class="sub" id="mail-head" hidden>Needs you</h3>
-    <ul class="rows" id="mail" hidden></ul>
-    <h3 class="sub" id="night-head" hidden>Last 24 hours</h3>
-    <ul class="rows" id="night" hidden></ul>
+    <ul class="rows" id="msgs" hidden></ul>
     <p class="empty" id="mail-empty">Nothing new, sir.</p>
-    <a class="intern-link" id="mail-link" href="mail.html">Open mail and action plans ›</a>
+    <a class="intern-link" id="mail-link" href="mail.html">Open mail ›</a>
   </section>
 
   <section class="panel" aria-labelledby="h-intern">
@@ -313,14 +311,11 @@ function render(d) {
   const night = [
     ...o.comments.map((c) => ({ k: "FB", t: `${c.who} · ${c.where}`, s: c.said })),
     ...(o.dms ? [{ k: "IG", t: `${o.dms} message${o.dms > 1 ? "s" : ""}`, s: (o.dm_from || []).join(", ") }] : []),
-    ...(o.emails || []).map((e) => ({ k: "Email", t: e.subject, s: [e.from, e.snippet].filter(Boolean).join(" · "), u: safe(e.url) })),
-    ...(o.more_emails ? [{ k: "Email", t: `+ ${o.more_emails} more`, s: "" }] : [])
+    ...(o.emails || []).map((e) => ({ k: "Email", t: e.subject, u: safe(e.url) }))
   ];
-  rows($("night"), night, (i) =>
-    `<li class="row"><span class="k">${esc(i.k)}</span><span class="v">${
-      i.u ? `<a href="${esc(i.u)}" target="_blank" rel="noopener">${esc(i.t)}</a>` : esc(i.t)}${
-      i.s ? `<span>${esc(i.s)}</span>` : ""}</span></li>`, "");
-  showMail("night", night.length);
+  nightItems = night.map((i) => ({ k: i.k, t: i.t, u: i.u || "" }));
+  nightExtra = o.more_emails || 0;
+  drawMessages();
 
   rows($("pma"), d.pma || [], (p) =>
     `<li class="row"><span class="k">${esc(p.when.replace(/ .*/, ""))}</span><span class="v">${esc(p.text)}<span>${
@@ -554,10 +549,22 @@ setInterval(showHealth, 60000);
 // Jarvis Mail: the full email and a recommended plan for each item (private page; no email content lives here)
 const MAIL_PAGE = "https://claude.ai/artifact/5X4Lud3fnsAa4qAyRYUrre";
 
-// The Messages panel: emails Jarvis flagged ("mail") above everything from the last 24 hours ("night")
-function showMail(part, count) {
-  $(part).hidden = $(part + "-head").hidden = !count;
-  $("mail-empty").hidden = !$("mail").hidden || !$("night").hidden;
+// The Messages panel: one list of at most 5 one-line rows. Flagged "Act" emails first, then other flagged
+// emails, then the last 24 hours (emails already flagged are dropped). Anything past 5 is a "+N more" link.
+let mailItems = [], nightItems = [], nightExtra = 0;
+const MSG_MAX = 5;
+function drawMessages() {
+  const key = (t) => String(t || "").toLowerCase().replace(/^((re|fwd?):\s*)+/, "").trim();
+  const seen = new Set(mailItems.map((m) => key(m.t)));
+  const all = [...mailItems.filter((m) => m.hot), ...mailItems.filter((m) => !m.hot),
+               ...nightItems.filter((i) => i.k !== "Email" || !seen.has(key(i.t)))];
+  const shown = all.slice(0, MSG_MAX), more = all.length - shown.length + nightExtra;
+  $("msgs").innerHTML = shown.map((i) =>
+    `<li class="row one${i.hot ? " due hot" : ""}"><span class="k">${esc(i.k)}</span><span class="v">${
+      i.u ? `<a href="${esc(i.u)}" target="_blank" rel="noopener">${esc(i.t)}</a>` : esc(i.t)}</span></li>`).join("");
+  $("mail-link").textContent = more > 0 ? `+${more} more ›` : "Open mail ›";
+  $("msgs").hidden = !shown.length;
+  $("mail-empty").hidden = !!shown.length;
 }
 
 // Emails Jarvis judged worth your attention, from the "-mail" side topic. Hidden until the first triage run.
@@ -571,11 +578,10 @@ async function loadMail() {
     const d = JSON.parse(msgs[msgs.length - 1].message);
     health.triage = Date.parse(d.updated) || 0; showHealth();
     $("mail-note").textContent = d.updated ? `checked ${dayName(d.updated).toLowerCase()} ${clock(d.updated)}` : "";
-    showMail("mail", (d.flagged || []).length);
-    rows($("mail"), d.flagged || [], (m) =>
-      `<li class="row${m.level === "act" ? " due hot" : ""}"><span class="k">${esc(m.level === "act" ? "Act" : dayName(m.at))}</span><span class="v">${
-        `<a href="${esc(safe(m.url) || MAIL_PAGE + (m.id ? "#" + encodeURIComponent(m.id) : ""))}" target="_blank" rel="noopener">${esc(m.subject)}</a>`}<span>${
-        esc([m.from, m.why].filter(Boolean).join(" · "))}</span></span></li>`, "");
+    const fl = (d.flagged || []).slice().sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0));
+    mailItems = fl.map((m) => ({ hot: m.level === "act", k: m.level === "act" ? "Act" : "FYI", t: m.subject,
+      u: safe(m.url) || MAIL_PAGE + (m.id ? "#" + encodeURIComponent(m.id) : "") }));
+    drawMessages();
   } catch (e) {}
 }
 
