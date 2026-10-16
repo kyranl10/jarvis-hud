@@ -102,6 +102,12 @@ body {
 .row.one .v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .row.due.hot .k { color: var(--alert); }
 .res-W { color: var(--arc); } .res-L { color: var(--alert); } .res-D { color: var(--muted); }
+.hw { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; vertical-align: 1px; padding: 0;
+  border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--arc); font: 600 12px/1 var(--mono); cursor: pointer; }
+.hw:hover, .hw:focus-visible { border-color: var(--arc); outline: none; }
+.row.done .k, .row.done .v { color: var(--muted); }
+.row.done .v { text-decoration: line-through; text-decoration-color: rgba(127, 168, 182, 0.6); }
+.row.done .hw { background: rgba(111, 227, 255, 0.14); border-color: var(--arc); }
 .tminus { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; padding: 1px 6px; border: 1px solid currentColor; margin-left: 8px; vertical-align: 2px; }
 
 .env { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -286,7 +292,15 @@ function rows(el, items, render, emptyText) {
   el.innerHTML = items.length ? items.map(render).join("") : `<li class="empty">${esc(emptyText)}</li>`;
 }
 
+// Homework you've ticked off on your private site, from hw/ in the store: { id: {title, course, done} }
+let hwDone = {}, hwLive = false;
+const hwId = (a) => (String(a.course || "") + "-" + String(a.title || "")).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 110) || "x";
+
 function render(d) {
+  // Ticked-off homework drops out of the count and the spoken briefing and sits at the end of the list, struck through
+  d._due ??= d.due;
+  d.due = d._due.filter((a) => !hwDone[hwId(a)]);
+  const finished = d._due.filter((a) => hwDone[hwId(a)]);
   $("greeting").textContent = greeting(d.address || "sir");
   const n = d.today.length, dueSoon = d.due.filter((a) => a.days <= 1).length;
   $("summary").textContent =
@@ -303,10 +317,13 @@ function render(d) {
       e.place || e.end ? `<span>${esc([e.end && "until " + e.end, e.place].filter(Boolean).join(" · "))}</span>` : ""}</span></li>`,
     "Nothing scheduled.");
 
-  rows($("due"), d.due, (a) =>
-    `<li class="row due${a.days <= 1 ? " hot" : ""}"><span class="k">${esc(a.day)}</span><span class="v">${esc(a.title)}<span>${
-      esc([a.course, a.time].filter(Boolean).join(" · "))}<em class="tminus">T-${esc(a.days)}d</em></span></span></li>`,
-    "Nothing due. Well done, sir.");
+  const hwBtn = (a, done) => hwLive ? `<button class="hw" type="button" data-hw="${esc(hwId(a))}" aria-pressed="${done}" aria-label="${
+    done ? "Mark not done: " : "Mark done: "}${esc(a.title)}" title="${done ? "Done. Tap to undo" : "Mark done"}">${done ? "✓" : ""}</button>` : "";
+  rows($("due"), [...d.due, ...finished], (a) => {
+    const done = !!hwDone[hwId(a)];
+    return `<li class="row due${done ? " done" : a.days <= 1 ? " hot" : ""}"><span class="k">${esc(a.day)}</span><span class="v">${hwBtn(a, done)}${esc(a.title)}<span>${
+      esc([a.course, a.time].filter(Boolean).join(" · "))}${done ? "" : `<em class="tminus">T-${esc(a.days)}d</em>`}</span></span></li>`;
+  }, "Nothing due. Well done, sir.");
 
   const o = d.overnight || { comments: [], dms: 0, dm_from: [], emails: [], more_emails: 0 };
   const night = [
@@ -707,8 +724,28 @@ try { const saved = localStorage.getItem("jarvis-topic"); if (location.hash.leng
 $("intern-link").href = "internships.html" + location.hash;
 $("mail-link").href = "mail.html" + location.hash;  // the GitHub Mail page, read from the same private feed
 $("speak").addEventListener("click", speak);
+// Tick homework off (or back on); saved to the store so every device shows it
+async function loadHw() {
+  try { hwDone = (await J.list("hw")).hw || {}; hwLive = true; if (window.__data) render(window.__data); } catch (e) {}
+}
+$("due").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-hw]");
+  if (!b || !window.__data) return;
+  const id = b.dataset.hw, a = window.__data._due.find((x) => hwId(x) === id);
+  if (!a) return;
+  const was = hwDone[id];
+  if (was) delete hwDone[id]; else hwDone[id] = { title: a.title, course: a.course || "", done: Date.now() };
+  render(window.__data);
+  try {
+    if (was) await J.remove("hw/" + id); else await J.set("hw/" + id, hwDone[id]);
+  } catch (err) {
+    if (was) hwDone[id] = was; else delete hwDone[id];
+    render(window.__data);
+  }
+});
 J.ping().then((p) => {
   if (!p) return;
+  loadHw(); J.poll(loadHw, 60000);
   const c = $("comms"); c.href = "chat.html"; c.removeAttribute("target");
   J.poll(() => { loadMail(); loadIntern(); }, 30000);
 });

@@ -6,7 +6,7 @@
 // The quick AI buttons (chat, plans, resume tailoring, application help) run on Cloudflare's free Workers AI
 // through the AI binding, so they answer in seconds and spend no Claude tokens.
 
-const COLLECTIONS = ["jobs", "drafts", "help", "mail", "chat", "meta", "workshop"];
+const COLLECTIONS = ["jobs", "drafts", "help", "mail", "chat", "meta", "workshop", "hw"];
 const PATH = new RegExp(`^(${COLLECTIONS.join("|")})/[A-Za-z0-9_.:@+-]{1,120}$`);
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
