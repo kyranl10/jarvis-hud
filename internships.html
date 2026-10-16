@@ -307,7 +307,7 @@ function paper(r) {
     ${(e.bullets || []).length ? `<ul>${e.bullets.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}</div>`;
   return `<div class="paper"><div class="nm">${esc((r.name || "").toUpperCase())}</div><div class="ct">${esc((r.contact || []).join("  ·  "))}</div>
     <h4>Education</h4>${(r.education || []).map((e) => ent({ ...e, title: e.school, org: e.degree, bullets: e.details })).join("")}
-    <h4>Skills</h4>${(r.skills || []).map((s) => `<div class="sk"><b>${esc(s.label)}:</b> ${esc(s.items)}</div>`).join("")}
+    <h4>Skills</h4>${(r.skills || []).map((s) => `<div class="sk"><b>${esc(s.label)}:</b> ${esc([].concat(s.items ?? []).join(", "))}</div>`).join("")}
     ${(r.sections || []).map((s) => `<h4>${esc(s.title)}</h4>${(s.entries || []).map(ent).join("")}`).join("")}</div>`;
 }
 
@@ -397,7 +397,7 @@ function layout(r, fs) {
   for (const s of r.skills || []) {
     font("bold"); const label = `${s.label}: `; text(label, M);
     const lw = doc.getTextWidth(label); font("normal");
-    const lines = doc.splitTextToSize(String(s.items || ""), R - M - lw);
+    const lines = doc.splitTextToSize([].concat(s.items ?? []).join(", "), R - M - lw);
     lines.forEach((ln, i) => doc.text(ln, M + lw, y + i * lh)); y += lines.length * lh;
   }
   for (const s of r.sections || []) { heading(s.title); (s.entries || []).forEach(entry); }

@@ -179,6 +179,19 @@ async function ask(env, messages, { max = 1200, wantJson = false } = {}) {
   return JSON.parse(m[0]);
 }
 
+// The AI may reorder skills but must not drop or rename any: keep the base resume's lines and labels, and within
+// each line put what the AI listed first (in its order) ahead of the rest. Lines follow the AI's order too.
+function keepSkills(base = [], got = []) {
+  const split = (v) => (Array.isArray(v) ? v.join(", ") : String(v || "")).split(/,(?![^()]*\))/).map((x) => x.trim()).filter(Boolean);
+  const key = (x) => x.toLowerCase().replace(/\s+/g, " ");
+  const order = new Map();
+  for (const g of Array.isArray(got) ? got : []) for (const x of split(g.items)) if (!order.has(key(x))) order.set(key(x), order.size);
+  const rank = (x) => order.has(key(x)) ? order.get(key(x)) : 1e6;
+  return base.map((b) => ({ label: b.label, items: split(b.items).map((x, i) => [x, rank(x), i]).sort((p, q) => p[1] - q[1] || p[2] - q[2]).map((p) => p[0]) }))
+    .sort((p, q) => Math.min(...p.items.map(rank)) - Math.min(...q.items.map(rank)))
+    .map((b) => ({ label: b.label, items: b.items.join(", ") }));
+}
+
 const AI_TASKS = {
   // Chat: the browser keeps the conversation; screenshots arrive as uploaded paths
   async chat(env, { history = [], images = [], calendar = "" }) {
@@ -219,12 +232,13 @@ Jarvis steps may only be: write a Gmail draft (never send), write a cover letter
     const [job, resume, prev] = await Promise.all([readDoc(env, "jobs/" + id), readDoc(env, "meta/resume"), notes ? readDoc(env, "drafts/" + id) : null]);
     if (!job || !resume) throw new Error("The job or your base resume isn't in the store.");
     const out = await ask(env, [{ role: "system", content: `You tailor a college student's resume for one internship.
-Hard rules: use ONLY facts in the base resume; never invent jobs, projects, skills, tools, numbers, awards or dates. You may reorder sections, entries, bullets and skills, reword bullets with the posting's vocabulary where truthful, and drop less relevant bullets. One page: at most about 16 bullets. Keep name and contact exactly.
+Hard rules: use ONLY facts in the base resume; never invent jobs, projects, skills, tools, numbers, awards or dates. Keep every skill and tool from the base resume with the same labels; you may only reorder them to lead with what the posting wants. You may reorder sections, entries and bullets, reword bullets with the posting's vocabulary where truthful, and drop less relevant bullets. One page: at most about 16 bullets. Keep name and contact exactly.
 Reply with only JSON: {"resume": <same shape as the base resume>, "changes": [up to 5 short strings], "answers": {"Why this company": "2-3 first-person sentences specific to the posting", "Why you're a fit": "2-3 sentences tying real experience to the role"}}` },
       { role: "user", content: `BASE RESUME:\n${JSON.stringify(resume)}\n\nINTERNSHIP:\n${JSON.stringify({ company: job.company, title: job.title, locations: job.locations, terms: job.terms, details: job.details || {} })}${
         notes && prev ? `\n\nPREVIOUS TAILORED VERSION:\n${JSON.stringify(prev.resume)}\n\nHIS NOTES (follow them within the hard rules):\n${notes}` : ""}` }],
       { max: 3000, wantJson: true });
     if (!out.resume || !Array.isArray(out.resume.sections)) throw new Error("The tailored resume came back garbled. Try again.");
+    out.resume.skills = keepSkills(resume.skills, out.resume.skills);
     const draft = { resume: out.resume, changes: (out.changes || []).slice(0, 6).map(String),
       answers: out.answers && typeof out.answers === "object" ? out.answers : {}, made: Date.now() };
     await save(env, "drafts/" + id, { set: draft });
