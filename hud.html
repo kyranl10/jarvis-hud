@@ -88,6 +88,7 @@ body {
 .panel h2 small { font-family: var(--mono); font-weight: 400; letter-spacing: 0.06em; color: var(--muted); font-size: 11px; }
 .rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .row { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: baseline; }
+#msgs .row { grid-template-columns: 98px 1fr; }
 .row .k { font-family: var(--mono); font-size: 13px; color: var(--arc-dim); font-variant-numeric: tabular-nums; }
 .row .v { min-width: 0; font-size: 17px; font-weight: 500; line-height: 1.25; overflow-wrap: anywhere; }
 .row .v span { display: block; font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 2px; }
@@ -248,7 +249,7 @@ const DEMO = {
   overnight: {
     comments: [{ who: "Sam Lee", where: "Drum Group", said: "Watch the accents in bar 12" }],
     dms: 1, dm_from: ["jordan.k"],
-    emails: [{ from: "Prof. Rivera", subject: "Office hours moved", snippet: "Thursday office hours are in Hamilton 425 this week." }], more_emails: 0
+    emails: [{ from: "Prof. Rivera", at: hoursFromNow(-6), subject: "Office hours moved", snippet: "Thursday office hours are in Hamilton 425 this week." }], more_emails: 0
   },
   pma: [{ when: "Today 9:15 AM", text: "Chapter tonight at 9:00 in the usual room", new: true }],
   insta: [{ who: "aplasticplant", when: "Today 8:40 AM", text: "Something new is growing. More soon", url: "" }],
@@ -311,9 +312,9 @@ function render(d) {
   const night = [
     ...o.comments.map((c) => ({ k: "FB", t: `${c.who} · ${c.where}`, s: c.said })),
     ...(o.dms ? [{ k: "IG", t: `${o.dms} message${o.dms > 1 ? "s" : ""}`, s: (o.dm_from || []).join(", ") }] : []),
-    ...(o.emails || []).map((e) => ({ k: "Email", t: e.subject, u: safe(e.url) }))
+    ...(o.emails || []).map((e) => ({ k: "Email", at: e.at, t: e.subject, u: safe(e.url) }))
   ];
-  nightItems = night.map((i) => ({ k: i.k, t: i.t, u: i.u || "" }));
+  nightItems = night.map((i) => ({ k: i.k, at: i.at, t: i.t, u: i.u || "" }));
   nightExtra = o.more_emails || 0;
   drawMessages();
 
@@ -551,6 +552,13 @@ setInterval(showHealth, 60000);
 // emails, then the last 24 hours (emails already flagged are dropped). Anything past 5 is a "+N more" link.
 let mailItems = [], nightItems = [], nightExtra = 0;
 const MSG_MAX = 5;
+// When a message was sent, like "10/11 4:11am"
+function sentAt(at) {
+  const d = new Date(at);
+  if (!at || isNaN(d)) return "";
+  const h = d.getHours(), m = String(d.getMinutes()).padStart(2, "0");
+  return `${d.getMonth() + 1}/${d.getDate()} ${h % 12 || 12}:${m}${h < 12 ? "am" : "pm"}`;
+}
 function drawMessages() {
   const key = (t) => String(t || "").toLowerCase().replace(/^((re|fwd?):\s*)+/, "").trim();
   const seen = new Set(mailItems.map((m) => key(m.t)));
@@ -558,7 +566,7 @@ function drawMessages() {
                ...nightItems.filter((i) => i.k !== "Email" || !seen.has(key(i.t)))];
   const shown = all.slice(0, MSG_MAX), more = all.length - shown.length + nightExtra;
   $("msgs").innerHTML = shown.map((i) =>
-    `<li class="row one${i.hot ? " due hot" : ""}"><span class="k">${esc(i.k)}</span><span class="v">${
+    `<li class="row one${i.hot ? " due hot" : ""}"><span class="k">${esc(sentAt(i.at) || i.k)}</span><span class="v">${
       i.u ? `<a href="${esc(i.u)}" target="_blank" rel="noopener">${esc(i.t)}</a>` : esc(i.t)}</span></li>`).join("");
   $("mail-link").textContent = more > 0 ? `+${more} more ›` : "Open mail ›";
   $("msgs").hidden = !shown.length;
@@ -578,7 +586,7 @@ async function loadMail() {
     health.triage = Date.parse(d.updated) || 0; showHealth();
     $("mail-note").textContent = d.updated ? `checked ${dayName(d.updated).toLowerCase()} ${clock(d.updated)}` : "";
     const fl = (d.flagged || []).slice().sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0));
-    mailItems = fl.map((m) => ({ hot: m.level === "act", k: m.level === "act" ? "Act" : "FYI", t: m.subject,
+    mailItems = fl.map((m) => ({ hot: m.level === "act", k: m.level === "act" ? "Act" : "FYI", at: m.at, t: m.subject,
       u: safe(m.url) || "mail.html" }));
     drawMessages();
   } catch (e) {}
@@ -594,7 +602,7 @@ async function loadMailPrivate() {
       .filter((m) => ["open", "needs_you", "working"].includes(m.status || "open") && (m.level === "act" || m.level === "fyi" || m.status === "needs_you"))
       .sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0));
     mailItems = open.map((m) => ({ hot: m.level === "act" || m.status === "needs_you", k: m.status === "needs_you" ? "You" : m.level === "act" ? "Act" : "FYI",
-      t: m.subject, u: safe(m.url) }));
+      at: m.at, t: m.subject, u: safe(m.url) }));
     drawMessages();
   } catch (e) {}
 }
