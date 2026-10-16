@@ -217,7 +217,7 @@ function card(m) {
   if (m.result) h += `<p class="result ${st === "needs_you" ? "blocked" : ""}">${esc(m.result)}</p>`;
   const links = (m.links || []).filter((l) => safeUrl(l.url)), outlook = outlookUrl(m.outlook);
   if (links.length || outlook) h += `<div class="links">${links.map((l) => `<a class="btn" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label || "Open")}</a>`).join("")}${
-    outlook ? `<a class="btn primary" href="${esc(outlook)}" target="_blank" rel="noopener" title="Opens a new email from your UNC account with this draft filled in">Open in Outlook</a>` : ""}</div>`;
+    outlook ? `<a class="btn primary" href="${esc(outlook)}" target="_blank" rel="noopener" title="Opens a new email from your UNC account with this draft filled in">Draft in Outlook</a>` : ""}</div>`;
   if (st === "working") h += `<p class="note warn">Jarvis is working on this. It shows up here when it's done, usually within a couple of minutes.</p>`;
   const canRead = live && m.body;
   h += `<div class="actions">${canRead ? `<button class="btn" data-act="read" data-id="${id}">${open.has(m.id) ? "Hide email" : "Read email"}</button>` : ""}${
