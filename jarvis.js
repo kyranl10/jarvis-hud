@@ -1,4 +1,4 @@
-// Store: kyranl10/jarvis-data (private). Deploys pick up DATA_TOKEN and the AI binding.
+// Store: kyranl10/jarvis-data (private). Deploys pick up DATA_TOKEN, the AI binding and the routine trigger.
 // Shared helpers for the Jarvis pages. On the Cloudflare site, /api is the private data store and the quick AI;
 // on the public GitHub Pages copy it doesn't exist, so pages fall back to their public, read-only data.
 const J = (() => {
