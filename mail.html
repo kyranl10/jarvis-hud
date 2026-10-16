@@ -85,6 +85,7 @@ header p { margin: 0; color: var(--muted); font-size: 15px; }
 .st-offer { color: var(--ok); }
 .st-rejected, .st-denied { color: var(--alert); }
 
+.status-row { margin-top: 4px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 button.btn, a.btn {
   font: 600 13px var(--display); letter-spacing: 0.16em; text-transform: uppercase; text-decoration: none;
@@ -172,7 +173,7 @@ const open = new Set(), keep = new Map(), busy = new Set();
 
 function bucket(m) {
   const st = m.status || "open";
-  if (st === "open") return m.plan || m.level === "act" ? "needs" : "fyi";
+  if (st === "open") return m.pin === "needs" || m.pin === "fyi" ? m.pin : m.plan || m.level === "act" ? "needs" : "fyi";
   if (st === "needs_you" || st === "working") return "needs";
   return st === "denied" ? "dismissed" : "done";
 }
@@ -194,6 +195,7 @@ function render() {
   $("list").innerHTML = shown.map(card).join("");
   for (const ta of document.querySelectorAll("textarea[data-id]")) ta.value = keep.get(ta.dataset.id) || "";
   for (const el of document.querySelectorAll("[data-act]")) el.onclick = () => act(el.dataset.act, el.dataset.id);
+  for (const el of document.querySelectorAll("select[data-id]")) el.onchange = () => moveTo(el.dataset.id, el.value);
 }
 
 function outlookUrl(d) {
@@ -239,7 +241,24 @@ function card(m) {
   } else if (st === "done") {
     h += `<div class="actions"><button class="btn" data-act="reopen" data-id="${id}">Reopen</button></div>`;
   }
+  // Move it to any tab yourself (not while Jarvis is working on it)
+  if (st !== "working") h += `<div class="actions status-row"><label class="note" for="s-${id}">Move to</label>
+    <select id="s-${id}" data-id="${id}">${Object.entries(TAB_NAME).map(([t, n]) => `<option value="${t}" ${t === bucket(m) ? "selected" : ""}>${n}</option>`).join("")}</select></div>`;
   return `<article class="job" id="m-${id}">${h}</article>`;
+}
+
+// Where each tab choice puts an email
+const MOVE = {
+  needs: () => ({ status: "open", pin: "needs" }),
+  fyi: () => ({ status: "open", pin: "fyi" }),
+  done: () => ({ status: "done", handled: Date.now() }),
+  dismissed: () => ({ status: "denied", decision: "deny", decidedAt: Date.now() }),
+};
+async function moveTo(id, t) {
+  const m = items.get(id);
+  if (!m || !MOVE[t] || bucket(m) === t) return;
+  keep.delete(id);
+  if (await save(id, MOVE[t]())) say(`Moved “${(m.subject || "email").slice(0, 50)}” to ${TAB_NAME[t]}.`);
 }
 
 async function save(id, patch) {
@@ -261,7 +280,7 @@ async function act(what, id) {
   if (what === "read") { open.has(id) ? open.delete(id) : open.add(id); return render(); }
   const note = ($("r-" + id)?.value || "").trim();
   if (what === "deny") { keep.delete(id); return save(id, { status: "denied", decision: "deny", note, decidedAt: Date.now() }); }
-  if (what === "reopen") return save(id, { status: "open", decision: null, note: "", result: "", links: [] });
+  if (what === "reopen") return save(id, { status: "open", decision: null, note: "", result: "", links: [], pin: null });
   if (what === "unplan") { keep.delete(id); const r = await save(id, { plan: null, plannedAt: null, note: "" }); if (r === "moved") say(`Plan cleared. Moved to ${TAB_NAME[bucket(items.get(id))]}.`); else if (r) say("Plan cleared."); return; }
   if (what === "plan") {
     busy.add(id); render(); say("Jarvis is making a plan…");
