@@ -271,7 +271,7 @@ async function act(what, id) {
   if (await save(id, { status: "working", decision: what, note, decidedAt: Date.now(), result: "", links: [] })) {
     keep.delete(id);
     const w = await J.wake("Mail request: " + id);
-    if (!w.woke) say("Saved. Jarvis will pick this up on its next scheduled run.");
+    say(w.woke ? "Sent to Jarvis. It usually finishes in a couple of minutes." : `Saved. Jarvis will pick this up on its next scheduled run${w.status ? ` (instant start failed: ${w.status})` : ""}.`);
   }
 }
 

@@ -124,10 +124,12 @@ export async function onRequest({ request, env, params }) {
     if (route === "wake" && request.method === "POST") {
       if (!env.ROUTINE_URL || !env.ROUTINE_TOKEN) return json({ woke: false, reason: "No API trigger set up; Jarvis picks this up on its next scheduled run." });
       const { text } = await request.json().catch(() => ({}));
-      const res = await fetch(env.ROUTINE_URL, { method: "POST", headers: {
-        Authorization: `Bearer ${env.ROUTINE_TOKEN}`, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      const url = env.ROUTINE_URL.trim().replace(/\/+$/, "").replace(/(\/routines\/[^/]+)$/, "$1/fire");
+      const res = await fetch(url, { method: "POST", headers: {
+        Authorization: `Bearer ${env.ROUTINE_TOKEN.trim()}`, "anthropic-version": "2023-06-01",
+        "anthropic-beta": "experimental-cc-routine-2026-04-01", "Content-Type": "application/json" },
         body: JSON.stringify({ text: String(text || "A request is waiting on the Jarvis site.").slice(0, 2000) }) });
-      return json({ woke: res.ok, status: res.status });
+      return json({ woke: res.ok, status: res.status, ...(res.ok ? {} : { detail: (await res.text()).slice(0, 300) }) });
     }
 
     if (route === "ai" && request.method === "POST") {
