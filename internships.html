@@ -261,7 +261,7 @@ function card(j) {
     body += `<div class="actions"><button class="btn primary" data-act="apply" data-id="${id}">Apply</button>
       <button class="btn deny" data-act="deny" data-id="${id}">Deny</button>${link}</div>`;
   } else if (st === "denied") {
-    body += `<div class="actions"><button class="btn" data-act="restore" data-id="${id}">Move back to review</button>${link}</div>`;
+    body += `<div class="actions"><button class="btn" data-act="restore" data-id="${id}">${drafts.has(j.id) ? "Move back to In progress" : "Move back to review"}</button>${link}</div>`;
   } else if (st === "tailoring") {
     body += busy.has(j.id) ? `<p class="note warn">Tailoring your resume for this role…</p>`
       : `<p class="note warn">Tailoring was interrupted.</p><div class="actions"><button class="btn primary" data-act="apply" data-id="${id}">Try again</button><button class="btn" data-act="restore" data-id="${id}">Cancel</button></div>`;
@@ -322,8 +322,9 @@ const setStatus = (id, status) => save(id, { status, ...(status === "applied" ? 
 async function act(what, id) {
   const j = jobs.get(id);
   if (!j) return;
-  if (what === "deny") return save(id, { status: "denied" });
-  if (what === "restore") return save(id, { status: "new" });
+  if (what === "deny") { await save(id, { status: "denied" }); return say("Moved to Denied. You can bring it back from there."); }
+  // A role you'd already tailored a resume for goes back to In progress; anything else back to review
+  if (what === "restore") return save(id, { status: j.status === "denied" && drafts.has(id) ? "ready" : "new" });
   if (what === "approve") return save(id, { status: "ready" });
   if (what === "reopen") return save(id, { status: "review" });
   if (what === "applied") return save(id, { status: "applied", appliedAt: Date.now() });
