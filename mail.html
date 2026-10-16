@@ -166,6 +166,7 @@ const esc = J.esc, safeUrl = J.safeUrl;
 const when = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
 let sayTimer;
 const say = (t) => { $("foot").textContent = t || ""; clearTimeout(sayTimer); if (t) sayTimer = setTimeout(() => { $("foot").textContent = ""; }, 9000); };
+const TAB_NAME = { needs: "Needs you", fyi: "FYI", done: "Handled", dismissed: "Dismissed" };
 let live = false, items = new Map(), tab = "needs";
 const open = new Set(), keep = new Map(), busy = new Set();
 
@@ -245,7 +246,12 @@ async function save(id, patch) {
   const m = items.get(id), before = m && { ...m };
   if (m) items.set(id, { ...m, ...patch });
   render();
-  try { await J.save("mail/" + id, patch); say(""); return true; }
+  try {
+    await J.save("mail/" + id, patch);
+    const now = items.get(id), moved = m && now && bucket(m) !== bucket(now);
+    say(moved ? `Moved to ${TAB_NAME[bucket(now)]}.` : "");
+    return moved ? "moved" : true;
+  }
   catch (e) { if (before) items.set(id, before); render(); say("Couldn't save that. " + e.message); return false; }
 }
 
@@ -256,12 +262,13 @@ async function act(what, id) {
   const note = ($("r-" + id)?.value || "").trim();
   if (what === "deny") { keep.delete(id); return save(id, { status: "denied", decision: "deny", note, decidedAt: Date.now() }); }
   if (what === "reopen") return save(id, { status: "open", decision: null, note: "", result: "", links: [] });
-  if (what === "unplan") { keep.delete(id); if (await save(id, { plan: null, plannedAt: null, note: "" })) { follow(id); say("Plan cleared."); } return; }
+  if (what === "unplan") { keep.delete(id); const r = await save(id, { plan: null, plannedAt: null, note: "" }); if (r === "moved") say(`Plan cleared. Moved to ${TAB_NAME[bucket(items.get(id))]}.`); else if (r) say("Plan cleared."); return; }
   if (what === "plan") {
     busy.add(id); render(); say("Jarvis is making a plan…");
     try {
-      const out = await J.ai("plan", { id, note }); items.set(id, { id, ...out.doc }); keep.delete(id);
-      busy.delete(id); follow(id); say("Plan ready.");
+      const was = bucket(m), out = await J.ai("plan", { id, note }); items.set(id, { id, ...out.doc }); keep.delete(id);
+      busy.delete(id); follow(id);
+      say(bucket(items.get(id)) !== was ? `Plan ready. Moved to ${TAB_NAME[bucket(items.get(id))]}.` : "Plan ready.");
     }
     catch (e) { say("Couldn't make a plan. " + e.message); }
     busy.delete(id); return render();
@@ -271,7 +278,7 @@ async function act(what, id) {
   if (await save(id, { status: "working", decision: what, note, decidedAt: Date.now(), result: "", links: [] })) {
     keep.delete(id);
     const w = await J.wake("Mail request: " + id);
-    say(w.woke ? "Sent to Jarvis. It usually finishes in a couple of minutes." : `Saved. Jarvis will pick this up on its next scheduled run${w.status ? ` (instant start failed: ${w.status})` : ""}.`);
+    say(w.woke ? "Sent to Jarvis. It'll move to Handled when done, usually in a couple of minutes." : `Saved. Jarvis will pick this up on its next scheduled run${w.status ? ` (instant start failed: ${w.status})` : ""}.`);
   }
 }
 
@@ -298,7 +305,14 @@ async function load() {
   try {
     if (live) {
       const d = await J.list("mail", "meta");
+      const prev = items;
       items = new Map(Object.entries(d.mail).map(([id, m]) => [id, { id, ...m }]));
+      // Say so when Jarvis finishes something you sent it
+      for (const [id, m] of items) {
+        const p = prev.get(id);
+        if (p?.status === "working" && m.status !== "working")
+          say(`Jarvis ${m.status === "needs_you" ? "needs you on" : "finished"} “${(m.subject || "an email").slice(0, 60)}”. Moved to ${TAB_NAME[bucket(m)]}.`);
+      }
       for (const m of [...items.values()]) {  // dismissed emails go away 3 days after you dismiss them
         if (m.status === "denied" && Date.now() - (m.decidedAt || 0) > KEEP_DISMISSED) { items.delete(m.id); J.remove("mail/" + m.id).catch(() => {}); }
       }
