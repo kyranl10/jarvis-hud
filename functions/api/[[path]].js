@@ -204,7 +204,7 @@ Building and changing things: Jarvis has a workshop that can change his HUD, pag
     const m = await readDoc(env, "mail/" + id);
     if (!m) throw new Error("That email isn't in the store.");
     const out = await ask(env, [{ role: "system", content: `You plan next steps on one email for Kyran. ${ABOUT}
-Reply with only JSON: {"summary": "1-2 honest sentences on fit, effort and blockers", "deadline": "short date or empty", "steps": [2-4 of {"who": "you"|"jarvis", "text": "one short step"}]}.
+Talk to him as "you", never "Kyran". Make steps concrete (what to open, write or decide, and by when). Reply with only JSON: {"summary": "1-2 honest sentences on fit, effort and blockers", "deadline": "short date or empty", "steps": [2-4 of {"who": "you"|"jarvis", "text": "one short step"}]}.
 Jarvis steps may only be: write a Gmail draft (never send), write a cover letter or note, make a calendar event, or change his HUD. Never invent experience or facts that aren't in the email.` },
       { role: "user", content: `Email from ${m.from || "?"} (${m.at || ""}), subject: ${m.subject || ""}\n\nWhat it says: ${m.gist || ""}\n\n${String(m.body || "").slice(0, 6000)}\n\nWhy it matters: ${m.why || ""}${note ? "\n\nKyran's note: " + note : ""}` }],
       { max: 700, wantJson: true });
