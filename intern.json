@@ -1,5 +1,5 @@
 {
- "updated": 1792426147274,
+ "updated": 1792434106749,
  "matched": 572,
  "counts": {
   "new": 71,
@@ -12,10 +12,6 @@
   {
    "status": "rejected",
    "at": 1792251268000
-  },
-  {
-   "status": "interview",
-   "at": 1792172050000
   }
  ],
  "fresh": [
