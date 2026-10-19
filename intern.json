@@ -1,8 +1,8 @@
 {
- "updated": 1792382939193,
- "matched": 568,
+ "updated": 1792404695272,
+ "matched": 569,
  "counts": {
-  "new": 73,
+  "new": 74,
   "progress": 2,
   "applied": 2,
   "interview": 1,
@@ -20,6 +20,11 @@
  ],
  "fresh": [
   {
+   "company": "Johnson & Johnson",
+   "title": "Quality Data Science Co-op",
+   "posted": 1792368000000
+  },
+  {
    "company": "Boston Scientific",
    "title": "AI/Data Science Intern",
    "posted": 1792190304000
@@ -28,11 +33,6 @@
    "company": "CenturyLink",
    "title": "Data Internship - Analytics & Decision Science",
    "posted": 1792190238000
-  },
-  {
-   "company": "Veeam Software",
-   "title": "Data & Analytics Engineering Intern",
-   "posted": 1792189757000
   }
  ]
 }
