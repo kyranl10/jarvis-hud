@@ -1,19 +1,14 @@
 {
- "updated": 1792469401943,
- "matched": 593,
+ "updated": 1792512666969,
+ "matched": 599,
  "counts": {
-  "new": 91,
+  "new": 93,
   "progress": 2,
   "applied": 2,
   "interview": 1,
   "denied": 0
  },
- "news": [
-  {
-   "status": "rejected",
-   "at": 1792251268000
-  }
- ],
+ "news": [],
  "fresh": [
   {
    "company": "Paccar",
@@ -21,14 +16,14 @@
    "posted": 1792458296000
   },
   {
+   "company": "Cigna Group",
+   "title": "Business Analytics Intern",
+   "posted": 1792454400000
+  },
+  {
    "company": "Amplify",
    "title": "Data Analytics Intern",
    "posted": 1792447437000
-  },
-  {
-   "company": "Zebra Technologies",
-   "title": "Business Analytics Intern",
-   "posted": 1792368000000
   }
  ]
 }
