@@ -1,8 +1,8 @@
 {
- "updated": 1792455691057,
- "matched": 580,
+ "updated": 1792469401943,
+ "matched": 593,
  "counts": {
-  "new": 79,
+  "new": 91,
   "progress": 2,
   "applied": 2,
   "interview": 1,
@@ -16,19 +16,19 @@
  ],
  "fresh": [
   {
-   "company": "Johnson & Johnson",
-   "title": "Quality Data Science Co-op",
+   "company": "Paccar",
+   "title": "Dealer Development Marketing Data Analytics Intern",
+   "posted": 1792458296000
+  },
+  {
+   "company": "Amplify",
+   "title": "Data Analytics Intern",
+   "posted": 1792447437000
+  },
+  {
+   "company": "Zebra Technologies",
+   "title": "Business Analytics Intern",
    "posted": 1792368000000
-  },
-  {
-   "company": "Boston Scientific",
-   "title": "AI/Data Science Intern",
-   "posted": 1792190304000
-  },
-  {
-   "company": "CenturyLink",
-   "title": "Data Internship - Analytics & Decision Science",
-   "posted": 1792190238000
   }
  ]
 }
