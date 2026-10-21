@@ -1,8 +1,8 @@
 {
- "updated": 1792552895200,
- "matched": 600,
+ "updated": 1792555798541,
+ "matched": 606,
  "counts": {
-  "new": 93,
+  "new": 92,
   "progress": 2,
   "applied": 2,
   "interview": 1,
@@ -16,19 +16,19 @@
  ],
  "fresh": [
   {
+   "company": "DriveWealth",
+   "title": "AI Consulting Associate Program Product Owner Intern",
+   "posted": 1792536182000
+  },
+  {
    "company": "Paccar",
-   "title": "Dealer Development Marketing Data Analytics Intern",
-   "posted": 1792458296000
+   "title": "Field Service Data Analyst Intern",
+   "posted": 1792536026000
   },
   {
    "company": "Cigna Group",
    "title": "Business Analytics Intern",
    "posted": 1792454400000
-  },
-  {
-   "company": "Amplify",
-   "title": "Data Analytics Intern",
-   "posted": 1792447437000
   }
  ]
 }
