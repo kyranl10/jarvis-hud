@@ -1,8 +1,8 @@
 {
- "updated": 1792620544729,
- "matched": 615,
+ "updated": 1792642225160,
+ "matched": 620,
  "counts": {
-  "new": 88,
+  "new": 74,
   "progress": 2,
   "applied": 2,
   "interview": 1,
@@ -16,19 +16,19 @@
  ],
  "fresh": [
   {
+   "company": "Athene",
+   "title": "Operations Reporting & Analytics Intern",
+   "posted": 1792540800000
+  },
+  {
+   "company": "KeyBank",
+   "title": "Marketing Analytics Intern",
+   "posted": 1792540800000
+  },
+  {
    "company": "DriveWealth",
    "title": "AI Consulting Associate Program Product Owner Intern",
    "posted": 1792536182000
-  },
-  {
-   "company": "Paccar",
-   "title": "Field Service Data Analyst Intern",
-   "posted": 1792536026000
-  },
-  {
-   "company": "Cigna Group",
-   "title": "Business Analytics Intern",
-   "posted": 1792454400000
   }
  ]
 }
