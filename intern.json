@@ -1,8 +1,8 @@
 {
- "updated": 1792700514080,
- "matched": 625,
+ "updated": 1792706945372,
+ "matched": 632,
  "counts": {
-  "new": 72,
+  "new": 76,
   "progress": 2,
   "applied": 2,
   "interview": 1,
@@ -16,6 +16,11 @@
  ],
  "fresh": [
   {
+   "company": "CarMax",
+   "title": "Business Analyst Intern - Atlanta, GA",
+   "posted": 1792670400000
+  },
+  {
    "company": "Athene",
    "title": "Operations Reporting & Analytics Intern",
    "posted": 1792540800000
@@ -24,11 +29,6 @@
    "company": "KeyBank",
    "title": "Marketing Analytics Intern",
    "posted": 1792540800000
-  },
-  {
-   "company": "DriveWealth",
-   "title": "AI Consulting Associate Program Product Owner Intern",
-   "posted": 1792536182000
   }
  ]
 }
