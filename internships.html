@@ -168,7 +168,6 @@ textarea { box-sizing: border-box; }
   <p class="foot" id="foot"></p>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="jarvis.js"></script>
 <script>
 // Your internship search. On the private Jarvis site every button saves straight to your data store, and
@@ -284,8 +283,9 @@ function card(j) {
         <button class="btn deny" data-act="restore" data-id="${id}">Cancel</button></div>`;
   } else if (st === "ready") {
     const dr = drafts.get(j.id) || {}, ans = dr.answers || {};
-    body += `<p class="note">Resume approved. Download it, open the application, and submit. Then mark it applied.</p>
-      <div class="actions"><button class="btn primary" data-act="pdf" data-id="${id}">Download resume PDF</button>
+    body += `<p class="note">Resume approved. Open it in Overleaf, download the PDF there, open the application, and submit. Then mark it applied.</p>
+      <div class="actions"><button class="btn primary" data-act="pdf" data-id="${id}">Open resume in Overleaf</button>
+        <button class="btn" data-act="tex" data-id="${id}">Download .tex</button>
         ${link.replace("View posting", "Open application")}
         <button class="btn" data-act="toggle" data-id="${id}">${open.has(j.id) ? "Hide resume" : "Show resume"}</button></div>
       ${open.has(j.id) ? paper(dr.resume) : ""}
@@ -295,7 +295,7 @@ function card(j) {
         <button class="btn deny" data-act="deny" data-id="${id}">Decided not to apply</button></div>`;
   } else {
     body += `<div class="actions">${j.appliedAt ? `<span class="note">Applied ${esc(day(j.appliedAt))}</span>` : ""}
-      <button class="btn" data-act="pdf" data-id="${id}" ${drafts.has(j.id) ? "" : "disabled"}>Resume PDF</button>${link}
+      <button class="btn" data-act="pdf" data-id="${id}" ${drafts.has(j.id) ? "" : "disabled"}>Resume in Overleaf</button>${link}
       <button class="btn" data-act="unapply" data-id="${id}">Move back to In progress</button></div>`;
   }
   // Every card can be moved anywhere; resume steps need a tailored resume first
@@ -310,7 +310,7 @@ function paper(r) {
   const ent = (e) => `<div class="ent"><div class="ln"><b>${esc(e.title)}</b><span>${esc(e.date)}</span></div>
     ${e.org || e.location ? `<div class="ln"><i>${esc(e.org)}</i><i>${esc(e.location)}</i></div>` : ""}
     ${(e.bullets || []).length ? `<ul>${e.bullets.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}</div>`;
-  return `<div class="paper"><div class="nm">${esc((r.name || "").toUpperCase())}</div><div class="ct">${esc((r.contact || []).join("  ·  "))}</div>
+  return `<div class="paper"><div class="nm">${esc((r.name || "").toUpperCase())}</div><div class="ct">${esc((r.contact || []).join("  ⋄  "))}</div>
     <h4>Education</h4>${(r.education || []).map((e) => ent({ ...e, title: e.school, org: e.degree, bullets: e.details })).join("")}
     <h4>Skills</h4>${(r.skills || []).map((s) => `<div class="sk"><b>${esc(s.label)}:</b> ${esc([].concat(s.items ?? []).join(", "))}</div>`).join("")}
     ${(r.sections || []).map((s) => `<h4>${esc(s.title)}</h4>${(s.entries || []).map(ent).join("")}`).join("")}</div>`;
@@ -342,7 +342,8 @@ async function act(what, id) {
   if (what === "applied") return save(id, { status: "applied", appliedAt: Date.now() });
   if (what === "unapply") { await save(id, { status: "ready", appliedAt: null }); return say("Moved back to In progress."); }
   if (what === "toggle") { open.has(id) ? open.delete(id) : open.add(id); return render(); }
-  if (what === "pdf") return pdf(j);
+  if (what === "pdf") return overleaf(j);
+  if (what === "tex") return texFile(j);
   if (what === "apply" || what === "redo") return tailor(j, what === "redo" ? ($("fb-" + id)?.value || "").trim() : "");
 }
 
@@ -364,54 +365,198 @@ async function tailor(j, notes) {
   render();
 }
 
-function pdf(j) {
-  const dr = drafts.get(j.id);
-  if (!dr || !window.jspdf) return;
-  let doc;
-  for (const size of [10.5, 10, 9.5, 9, 8.5]) { doc = layout(dr.resume, size); if (doc.getNumberOfPages() === 1) break; }
-  doc.save(`${(dr.resume.name || "Resume").replace(/\s+/g, "_")}_${String(j.company).replace(/[^A-Za-z0-9]+/g, "_")}.pdf`);
+// Tailored resumes are built from Kyran's own Overleaf template (Trey Hunner's resume.cls plus his macros),
+// so only the wording changes. Overleaf compiles it; the .tex can also be downloaded.
+function tex(r) {
+  const x = (t) => String(t ?? "").replace(/[‘’]/g, "'").replace(/\\/g, "\\textbackslash{}").replace(/([&%$#_{}])/g, "\\$1")
+    .replace(/~/g, "\\textasciitilde{}").replace(/\^/g, "\\textasciicircum{}").replace(/\s[–—]\s(?=\S)/g, (m) => m.includes("–") ? " -- " : " --- ")
+    .replace(/(\b\d{4})\s*[–-]\s*(\d{4}\b|Present)/g, "$1 -- $2");
+  const c = r.contact || [], half = Math.ceil(c.length / 2);
+  const addr = (list) => list.map((v) => /@/.test(v) ? `\\href{mailto:${v}}{${x(v)}}` : /linkedin\.com|github\.com|^https?:/.test(v) ? `\\href{https://${String(v).replace(/^https?:\/\//, "").replace(/^(linkedin)/, "www.$1")}}{${x(v)}}` : x(v)).join(" \\\\ ");
+  const items = (list) => (list || []).length ? `\\begin{itemize}\\itemsep -6pt\n${list.map((b) => `    \\item ${x(b)}`).join("\n")}\n\\end{itemize}\n` : "";
+  const entry = (e) => (e.org || e.location
+    ? `\\resumeEntry\n  {${x(e.title)}}\n  {${x(e.date)}}\n  {${x(e.org)}}\n  {${x(e.location)}}\n`
+    : `\\resumeEntryOneLine\n  {${x(e.title)}}\n  {${x(e.date)}}\n`) + items(e.bullets);
+  const section = (title, body) => `\\vspace{-12pt}\n\\begin{rSection}{\\textsc{${x(String(title).toUpperCase())}}}\n\n${body}\n\\end{rSection}\n`;
+  const edu = (r.education || []).map((e) => `\\resumeEntry\n  {${x(e.school)}}\n  {${x(e.date)}}\n  {${x(e.degree)}}\n  {${x(e.location)}}\n\n` +
+    (e.details || []).map((d) => { const m = String(d).match(/^([^:]{2,40}):\s*(.*)$/); return m ? `\\textit{${x(m[1])}:} ${x(m[2])}` : x(d); }).join("\n\n") + "\n\n\\vspace{1pt}\n").join("\n");
+  const skills = `\\begin{tabular}{@{} >{\\bfseries}l @{\\hspace{6ex}} l}\n${(r.skills || []).map((s) => `${x(s.label)} & ${x([].concat(s.items ?? []).join(", "))} \\\\`).join("\n")}\n\\end{tabular}`;
+  return `\\documentclass{resume}
+\\usepackage[left=0.4in,top=0.2in,right=0.4in,bottom=0.2in]{geometry}
+\\usepackage[hidelinks]{hyperref}
+
+\\newcommand{\\tab}[1]{\\hspace{.2667\\textwidth}\\rlap{#1}}
+\\newcommand{\\itab}[1]{\\hspace{0em}\\rlap{#1}}
+
+% Two-line entry: title/date + org/location
+\\newcommand{\\resumeEntry}[4]{%
+\\noindent\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}} l r}
+\\textbf{#1} & #2 \\\\
+#3 & \\textit{#4}
+\\end{tabular*}\\vspace{-4pt}
 }
 
-function layout(r, fs) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "pt", format: "letter" });
-  const W = doc.internal.pageSize.getWidth(), M = 40, R = W - M, lh = fs * 1.28;
-  let y = M + 6;
-  const text = (s, x, opts = {}) => doc.text(String(s || ""), x, y, opts);
-  const font = (style, size = fs) => { doc.setFont("helvetica", style); doc.setFontSize(size); };
-  const need = (h) => { if (y + h > doc.internal.pageSize.getHeight() - M) { doc.addPage(); y = M; } };
-  font("bold", fs + 7); text((r.name || "").toUpperCase(), W / 2, { align: "center" }); y += lh * 1.25;
-  font("normal", fs - 0.5); text((r.contact || []).join("   |   "), W / 2, { align: "center" }); y += lh * 0.9;
-  const heading = (t) => { need(lh * 2.2); y += lh * 0.45; font("bold", fs + 0.5); text(t.toUpperCase(), M); y += 3; doc.setLineWidth(0.6); doc.line(M, y, R, y); y += lh * 0.95; };
-  const bullets = (list) => {
-    font("normal");
-    for (const b of list || []) {
-      const lines = doc.splitTextToSize(String(b), R - M - 14);
-      need(lines.length * lh); text("•", M + 3);
-      lines.forEach((ln, i) => doc.text(ln, M + 14, y + i * lh)); y += lines.length * lh;
-    }
-  };
-  const entry = (e) => {
-    need(lh * 3);
-    font("bold"); text(e.title, M); if (e.date) text(e.date, R, { align: "right" }); y += lh;
-    if (e.org || e.location) { font("italic"); text(e.org, M); if (e.location) text(e.location, R, { align: "right" }); y += lh; }
-    bullets(e.bullets); y += lh * 0.25;
-  };
-  heading("Education");
-  for (const e of r.education || []) {
-    entry({ title: e.school, date: e.date, org: e.degree, location: e.location, bullets: [] });
-    font("normal");
-    for (const d of e.details || []) { const lines = doc.splitTextToSize(String(d), R - M); lines.forEach((ln, i) => doc.text(ln, M, y + i * lh)); y += lines.length * lh; }
+% One-line entry: title/date only
+\\newcommand{\\resumeEntryOneLine}[2]{%
+\\noindent\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}} l r}
+\\textbf{#1} & #2
+\\end{tabular*}\\vspace{-4pt}
+}
+
+\\name{${x(r.name)}}
+\\address{${addr(c.slice(0, half))}}
+\\address{${addr(c.slice(half))}}
+
+\\begin{document}
+
+${section("Education", edu)}
+${section("Skills", skills)}
+${(r.sections || []).map((s) => section(s.title, (s.entries || []).map(entry).join("\n\\vspace{-6pt}\n"))).join("\n")}
+\\end{document}
+`;
+}
+
+const RESUME_CLS = `% resume.cls
+
+% \\documentstyle{resume}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Copyright (C) 2010 by Trey Hunner
+%
+% Copying and distribution of this file, with or without modification,
+% are permitted in any medium without royalty provided the copyright
+% notice and this notice are preserved.  This file is offered as-is,
+% without any warranty.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\\ProvidesClass{resume}[2010/07/10 v0.9 Resume class]
+
+\\LoadClass[11pt,letterpaper]{article}
+
+\\usepackage[parfill]{parskip}       % Do not indent paragraphs
+\\usepackage{array}                  % required for boldface tabular columns
+\\usepackage{ifthen}
+
+\\nofiles                            % .aux files are not needed for resumes
+\\pagestyle{empty}                   % resumes do not need page numbers
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% HEADINGS: Commands for printing name and address
+
+\\def \\name#1{\\def\\@name{#1}}        % \\name command can be used to set name
+\\def \\@name {}                      % Set \\@name to empty by default
+
+\\def \\addressSep {$\\diamond$}         % Set default address seperator
+
+% One or two address lines can be specified 
+\\let \\@addressone \\relax
+\\let \\@addresstwo \\relax
+
+% \\address command can be used to set first and second address (optional)
+\\def \\address #1{
+  \\@ifundefined{@addresstwo}{
+    \\def \\@addresstwo {#1}
+  }{
+    \\def \\@addressone {#1}
   }
-  heading("Skills");
-  for (const s of r.skills || []) {
-    font("bold"); const label = `${s.label}: `; text(label, M);
-    const lw = doc.getTextWidth(label); font("normal");
-    const lines = doc.splitTextToSize([].concat(s.items ?? []).join(", "), R - M - lw);
-    lines.forEach((ln, i) => doc.text(ln, M + lw, y + i * lh)); y += lines.length * lh;
+}
+
+% \\printaddress is used to style an address line (given as input)
+\\def \\printaddress #1{
+  \\begingroup
+    \\def \\\\ {\\addressSep\\ }
+    \\centerline{#1}
+  \\endgroup
+  \\par
+  \\addressskip
+}
+
+% \\printname is used to print the name as a page header
+\\def \\printname {
+  \\begingroup
+    \\centerline{\\textbf{\\MakeUppercase{\\namesize\\@name}}}
+  \\endgroup
+  \\par
+  \\nameskip
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DOCUMENT: Create the head of the document
+
+\\AtBeginDocument{                     % Begin document
+  \\printname                        % Print the name specified with \\name
+  \\@ifundefined{@addressone}{}{     % Print the first address if specified
+    \\printaddress{\\@addressone}}
+  \\@ifundefined{@addresstwo}{}{     % Print the second address if specified
+    \\printaddress{\\@addresstwo}}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SECTIONS: Create section headings
+
+% Used to create large resume section
+\\newenvironment{rSection}[1]{
+  \\sectionskip
+  \\textbf{\\MakeUppercase{#1}}
+  \\sectionlineskip
+  \\hrule
+  \\begin{list}{}{
+    \\setlength{\\leftmargin}{1.5em}
   }
-  for (const s of r.sections || []) { heading(s.title); (s.entries || []).forEach(entry); }
-  return doc;
+  \\item[]
+}{
+  \\end{list}
+}
+
+% Used to format job listing
+\\newenvironment{rSubsection}[4]{
+  %%%%%%%%%%%%%%%%%%%%%% Default Layout: %%%%%%%%%%%%%%%%%%%%%%%%
+  %%    Employer (bold)                     Dates (regular)    %%
+  %%    Title (emphasis)                Location (emphasis)    %%
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \\textbf{#1}                 \\hfill                  {    #2}% Stop a space
+  \\ifthenelse{\\equal{#3}{}}{}{
+  \\\\
+  \\emph{#3}                \\hfill                  \\emph{#4}% Stop a space
+  }\\smallskip
+  % \\cdot used for bullets, items non-indented
+  \\begin{list}{$\\cdot$}{\\leftmargin=0em}
+  \\itemsep -0.5em \\vspace{-0.5em}
+}{
+  \\end{list}
+  \\vspace{0.5em}
+}
+
+\\def\\namesize{\\huge}
+\\def\\nameskip{\\medskip}
+\\def\\addressskip{\\smallskip}
+\\def\\sectionskip{\\bigskip}
+\\def\\sectionlineskip{\\medskip}
+`;
+
+function fileName(r, j, ext) { return `${(r.name || "Resume").replace(/\s+/g, "_")}_${String(j.company).replace(/[^A-Za-z0-9]+/g, "_")}.${ext}`; }
+
+// Overleaf's "open a project from code" form: main.tex plus the class file, compiled with your template
+function overleaf(j) {
+  const dr = drafts.get(j.id);
+  if (!dr) return;
+  const f = document.createElement("form");
+  f.method = "POST"; f.action = "https://www.overleaf.com/docs"; f.target = "_blank"; f.hidden = true;
+  const field = (name, value) => { const i = document.createElement("input"); i.type = "hidden"; i.name = name; i.value = value; f.append(i); };
+  field("encoded_snip[]", encodeURIComponent(tex(dr.resume))); field("snip_name[]", "main.tex");
+  field("encoded_snip[]", encodeURIComponent(RESUME_CLS)); field("snip_name[]", "resume.cls");
+  field("engine", "pdflatex"); field("main_document", "main.tex");
+  document.body.append(f); f.submit(); f.remove();
+  say("Opened in Overleaf. Download the PDF from there.");
+}
+
+function texFile(j) {
+  const dr = drafts.get(j.id);
+  if (!dr) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([tex(dr.resume)], { type: "application/x-tex" }));
+  a.download = fileName(dr.resume, j, "tex"); document.body.append(a); a.click(); a.remove();
 }
 
 // Application help: screenshots of the application plus a question; the answer is saved with the job
