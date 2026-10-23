@@ -1,9 +1,9 @@
 {
- "updated": 1792728606057,
+ "updated": 1792765391128,
  "matched": 643,
  "counts": {
-  "new": 85,
-  "progress": 2,
+  "new": 84,
+  "progress": 3,
   "applied": 2,
   "interview": 1,
   "denied": 0
@@ -16,11 +16,6 @@
  ],
  "fresh": [
   {
-   "company": "Paccar",
-   "title": "Aftersales Data Analyst Intern",
-   "posted": 1792717830000
-  },
-  {
    "company": "Nintendo",
    "title": "Intern - Business Intelligence",
    "posted": 1792670400000
@@ -29,6 +24,11 @@
    "company": "CarMax",
    "title": "Business Analyst Intern - Atlanta, GA",
    "posted": 1792670400000
+  },
+  {
+   "company": "General Dynamics Information Technology",
+   "title": "Financial Data Analyst Intern",
+   "posted": 1792627200000
   }
  ]
 }
