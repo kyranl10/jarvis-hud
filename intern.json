@@ -1,8 +1,8 @@
 {
- "updated": 1792706945372,
- "matched": 632,
+ "updated": 1792728606057,
+ "matched": 643,
  "counts": {
-  "new": 76,
+  "new": 85,
   "progress": 2,
   "applied": 2,
   "interview": 1,
@@ -16,19 +16,19 @@
  ],
  "fresh": [
   {
-   "company": "CarMax",
-   "title": "Business Analyst Intern - Atlanta, GA",
+   "company": "Paccar",
+   "title": "Aftersales Data Analyst Intern",
+   "posted": 1792717830000
+  },
+  {
+   "company": "Nintendo",
+   "title": "Intern - Business Intelligence",
    "posted": 1792670400000
   },
   {
-   "company": "Athene",
-   "title": "Operations Reporting & Analytics Intern",
-   "posted": 1792540800000
-  },
-  {
-   "company": "KeyBank",
-   "title": "Marketing Analytics Intern",
-   "posted": 1792540800000
+   "company": "CarMax",
+   "title": "Business Analyst Intern - Atlanta, GA",
+   "posted": 1792670400000
   }
  ]
 }
