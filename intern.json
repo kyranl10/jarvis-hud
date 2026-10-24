@@ -1,8 +1,8 @@
 {
- "updated": 1792771913776,
- "matched": 646,
+ "updated": 1792814954336,
+ "matched": 652,
  "counts": {
-  "new": 83,
+  "new": 86,
   "progress": 3,
   "applied": 2,
   "interview": 1,
@@ -16,19 +16,19 @@
  ],
  "fresh": [
   {
-   "company": "Nintendo",
-   "title": "Intern - Business Intelligence",
-   "posted": 1792670400000
+   "company": "Simbe Robotics",
+   "title": "Data Analytics & Data Science Intern",
+   "posted": 1792793474000
   },
   {
-   "company": "CarMax",
-   "title": "Business Analyst Intern - Atlanta, GA",
-   "posted": 1792670400000
+   "company": "ID.me",
+   "title": "Analytics Engineer Intern",
+   "posted": 1792782891000
   },
   {
-   "company": "General Dynamics Information Technology",
-   "title": "Financial Data Analyst Intern",
-   "posted": 1792627200000
+   "company": "Auto-Owners Insurance",
+   "title": "Business Intelligence Developer Intern",
+   "posted": 1792713600000
   }
  ]
 }
