@@ -1,5 +1,5 @@
 {
- "updated": 1792944542905,
+ "updated": 1792959695323,
  "matched": 661,
  "counts": {
   "new": 90,
@@ -8,12 +8,7 @@
   "interview": 1,
   "denied": 0
  },
- "news": [
-  {
-   "status": "interview",
-   "at": 1792699747000
-  }
- ],
+ "news": [],
  "fresh": [
   {
    "company": "Simbe Robotics",
