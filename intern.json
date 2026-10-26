@@ -1,8 +1,8 @@
 {
- "updated": 1792987749307,
- "matched": 661,
+ "updated": 1793031342059,
+ "matched": 664,
  "counts": {
-  "new": 81,
+  "new": 80,
   "progress": 3,
   "applied": 2,
   "interview": 1,
@@ -10,6 +10,11 @@
  },
  "news": [],
  "fresh": [
+  {
+   "company": "Wells Fargo",
+   "title": "Technology Intern - Early Careers - Data Engineering",
+   "posted": 1792972800000
+  },
   {
    "company": "Simbe Robotics",
    "title": "Data Analytics & Data Science Intern",
@@ -19,11 +24,6 @@
    "company": "ID.me",
    "title": "Analytics Engineer Intern",
    "posted": 1792782891000
-  },
-  {
-   "company": "Auto-Owners Insurance",
-   "title": "Business Intelligence Developer Intern",
-   "posted": 1792713600000
   }
  ]
 }
