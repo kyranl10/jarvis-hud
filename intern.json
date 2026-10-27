@@ -1,8 +1,8 @@
 {
- "updated": 1793052670163,
- "matched": 669,
+ "updated": 1793074176021,
+ "matched": 676,
  "counts": {
-  "new": 77,
+  "new": 78,
   "progress": 3,
   "applied": 2,
   "interview": 1,
@@ -11,19 +11,19 @@
  "news": [],
  "fresh": [
   {
+   "company": "Highmark Health",
+   "title": "Data Analyst Intern",
+   "posted": 1792972800000
+  },
+  {
    "company": "Wells Fargo",
    "title": "Technology Intern - Early Careers - Data Engineering",
    "posted": 1792972800000
   },
   {
-   "company": "Simbe Robotics",
-   "title": "Data Analytics & Data Science Intern",
-   "posted": 1792793474000
-  },
-  {
-   "company": "ID.me",
-   "title": "Analytics Engineer Intern",
-   "posted": 1792782891000
+   "company": "Federal Home Loan Bank of Indianapolis",
+   "title": "Business Intelligence Intern",
+   "posted": 1792972800000
   }
  ]
 }
