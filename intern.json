@@ -1,6 +1,6 @@
 {
- "updated": 1793074176021,
- "matched": 676,
+ "updated": 1793117640594,
+ "matched": 682,
  "counts": {
   "new": 78,
   "progress": 3,
@@ -11,18 +11,18 @@
  "news": [],
  "fresh": [
   {
+   "company": "Visa",
+   "title": "Data Science Intern - Data and AI Team",
+   "posted": 1793059200000
+  },
+  {
+   "company": "Nissan",
+   "title": "AI Intern",
+   "posted": 1793059200000
+  },
+  {
    "company": "Highmark Health",
    "title": "Data Analyst Intern",
-   "posted": 1792972800000
-  },
-  {
-   "company": "Wells Fargo",
-   "title": "Technology Intern - Early Careers - Data Engineering",
-   "posted": 1792972800000
-  },
-  {
-   "company": "Federal Home Loan Bank of Indianapolis",
-   "title": "Business Intelligence Intern",
    "posted": 1792972800000
   }
  ]
