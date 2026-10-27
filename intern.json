@@ -1,5 +1,5 @@
 {
- "updated": 1793138940188,
+ "updated": 1793139671395,
  "matched": 682,
  "counts": {
   "new": 77,
@@ -8,7 +8,12 @@
   "interview": 1,
   "denied": 0
  },
- "news": [],
+ "news": [
+  {
+   "status": "applied",
+   "at": 1793137707000
+  }
+ ],
  "fresh": [
   {
    "company": "Visa",
