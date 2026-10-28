@@ -1,8 +1,8 @@
 {
- "updated": 1793139671395,
- "matched": 682,
+ "updated": 1793160580816,
+ "matched": 692,
  "counts": {
-  "new": 77,
+  "new": 78,
   "progress": 3,
   "applied": 3,
   "interview": 1,
@@ -16,19 +16,19 @@
  ],
  "fresh": [
   {
+   "company": "Hive Financial Systems",
+   "title": "Analytics Intern",
+   "posted": 1793129285000
+  },
+  {
+   "company": "Sonos",
+   "title": "Data Quality Intern",
+   "posted": 1793059200000
+  },
+  {
    "company": "Visa",
    "title": "Data Science Intern - Data and AI Team",
    "posted": 1793059200000
-  },
-  {
-   "company": "Nissan",
-   "title": "AI Intern",
-   "posted": 1793059200000
-  },
-  {
-   "company": "Highmark Health",
-   "title": "Data Analyst Intern",
-   "posted": 1792972800000
   }
  ]
 }
