@@ -1,12 +1,12 @@
 {
- "updated": 1793201414058,
- "matched": 692,
+ "updated": 1793203956266,
+ "matched": 702,
  "counts": {
   "new": 77,
-  "progress": 4,
-  "applied": 3,
+  "progress": 2,
+  "applied": 4,
   "interview": 1,
-  "denied": 0
+  "denied": 2
  },
  "news": [
   {
@@ -21,13 +21,13 @@
    "posted": 1793129285000
   },
   {
-   "company": "Sonos",
-   "title": "Data Quality Intern",
-   "posted": 1793059200000
+   "company": "Visa",
+   "title": "Consulting & Analytics Intern - Summer 2027",
+   "posted": 1793102400000
   },
   {
-   "company": "Visa",
-   "title": "Data Science Intern - Data and AI Team",
+   "company": "Sonos",
+   "title": "Data Quality Intern",
    "posted": 1793059200000
   }
  ]
