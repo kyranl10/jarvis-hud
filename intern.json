@@ -1,8 +1,8 @@
 {
- "updated": 1793215341481,
- "matched": 702,
+ "updated": 1793225417753,
+ "matched": 708,
  "counts": {
-  "new": 77,
+  "new": 83,
   "progress": 2,
   "applied": 4,
   "interview": 1,
@@ -20,6 +20,11 @@
  ],
  "fresh": [
   {
+   "company": "Nissan",
+   "title": "AI & Data Analytics Intern - Summer 2027 - Irving, TX or Franklin, TN",
+   "posted": 1793188800000
+  },
+  {
    "company": "Hive Financial Systems",
    "title": "Analytics Intern",
    "posted": 1793129285000
@@ -28,11 +33,6 @@
    "company": "Visa",
    "title": "Consulting & Analytics Intern - Summer 2027",
    "posted": 1793102400000
-  },
-  {
-   "company": "Sonos",
-   "title": "Data Quality Intern",
-   "posted": 1793059200000
   }
  ]
 }
