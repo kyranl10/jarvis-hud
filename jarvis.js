@@ -52,6 +52,8 @@ const J = (() => {
     // Links end in #all/thread-f:<decimal id>; the app wants the same id in hex
     const hash = new URL(a.href).hash, dec = hash.match(/thread-f:(\d+)/), hex = hash.match(/\/([0-9a-f]{16})$/i);
     const thread = dec ? BigInt(dec[1]).toString(16) : hex ? hex[1] : "";
-    location.href = thread ? "googlegmail:///cv=" + thread : "googlegmail://";
+    // Pages run inside index.html's tab frames, and iOS ignores app links opened from a frame, so open it from the top page
+    const app = thread ? "googlegmail:///cv=" + thread : "googlegmail://";
+    try { window.top.location.href = app; } catch (err) { location.href = app; }
   });
 })();
