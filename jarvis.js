@@ -41,14 +41,28 @@ const J = (() => {
 })();
 
 // On iPhone and iPad, Gmail web links open the Gmail app instead of Safari, where Google shows its sign-up page.
-// The app opens to the inbox: it rejects every link format for a single email (tested Oct 29), so there's no email-specific link.
+// The app rejects every link format for a single email (tested Oct 29), so the tap copies the email's subject
+// for pasting into Gmail's search, then opens the app.
 (() => {
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   if (!ios) return;
-  document.addEventListener("click", (e) => {
+  const copy = async (text) => {
+    try { await navigator.clipboard.writeText(text); return; } catch (err) {}
+    const ta = Object.assign(document.createElement("textarea"), { value: text, readOnly: true });
+    ta.style.cssText = "position:fixed;opacity:0";
+    document.body.append(ta); ta.setSelectionRange(0, text.length);
+    try { document.execCommand("copy"); } catch (err) {}
+    ta.remove();
+  };
+  document.addEventListener("click", async (e) => {
     const a = e.target.closest && e.target.closest('a[href^="https://mail.google.com/"]');
     if (!a || e.defaultPrevented) return;
     e.preventDefault();
+    // Mail cards carry the subject in their heading; the HUD's Messages rows use it as the link text
+    const card = a.closest("article")?.querySelector("h3")?.textContent || "";
+    const subject = (card || (/^open in gmail$/i.test(a.textContent.trim()) ? "" : a.textContent))
+      .trim().replace(/^((re|fwd?|fw)\s*:\s*)+/i, "");
+    if (subject) await copy(subject);
     // Pages run inside index.html's tab frames, and iOS ignores app links opened from a frame, so open it from the top page
     try { window.top.location.href = "googlegmail://"; } catch (err) { location.href = "googlegmail://"; }
   });
