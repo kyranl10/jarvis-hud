@@ -1,8 +1,8 @@
 {
- "updated": 1793225417753,
- "matched": 708,
+ "updated": 1793246993441,
+ "matched": 720,
  "counts": {
-  "new": 83,
+  "new": 88,
   "progress": 2,
   "applied": 4,
   "interview": 1,
@@ -25,14 +25,14 @@
    "posted": 1793188800000
   },
   {
-   "company": "Hive Financial Systems",
-   "title": "Analytics Intern",
-   "posted": 1793129285000
+   "company": "Federal Home Loan Bank of Indianapolis",
+   "title": "MPP Data Analytics Intern",
+   "posted": 1793145600000
   },
   {
-   "company": "Visa",
-   "title": "Consulting & Analytics Intern - Summer 2027",
-   "posted": 1793102400000
+   "company": "Regeneron Pharmaceuticals",
+   "title": "Data Science & Digital Innovation Intern - Industrial Operations and Product Supply",
+   "posted": 1793145600000
   }
  ]
 }
