@@ -552,8 +552,8 @@ function showHealth() {
   // Mail triage runs every 2 hours from 8 AM to 10 PM; the internship scan every 6 hours
   if (health.triage) items.push(["Triage", health.triage, (h >= 9 && h < 23 ? 3 * 60 : 11 * 60) * min]);
   if (health.intern) items.push(["Internships", health.intern, 7 * 60 * min]);
-  // Application statuses: the hourly status sync only writes them when something changed, and the 6-hourly
-  // internship scan always does, so a quiet stretch with no news is normal; only flag it past the scan's window
+  // Application statuses: the private site shows when the status check last read the mail (hourly, and on Sync);
+  // the public one only sees writes, which happen when something changed or the 6-hourly scan runs
   if (health.jobs) items.push(["Statuses", health.jobs, 7 * 60 * min]);
   const when = (t) => !t ? "over a day ago" : now - t < 20 * 3600e3 ? clock(new Date(t).toISOString()) : dayName(new Date(t).toISOString());
   const stale = items.filter(([, t, max]) => now - t > max);
@@ -632,7 +632,7 @@ async function loadJobsAge() {
   try {
     const res = await fetch(`https://ntfy.sh/${topic.replace(/-hud$/, "")}-jobs/json?poll=1&since=24h`, { cache: "no-store" });
     const msgs = (await res.text()).trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((m) => m.event === "message");
-    if (msgs.length) { health.jobs = JSON.parse(msgs[msgs.length - 1].message).updated || 0; showHealth(); }
+    if (msgs.length) { health.jobs = Math.max(health.jobs, JSON.parse(msgs[msgs.length - 1].message).updated || 0); showHealth(); }
   } catch (e) {}
 }
 async function loadIntern() {
@@ -667,7 +667,7 @@ async function loadInternPrivate() {
       else if (["applied", "interview", "offer", "rejected"].includes(st)) c.applied++;
       if (st === "interview" || st === "offer") c.interview++;
     }
-    health.intern = s.lastRun || 0; showHealth();
+    health.intern = s.lastRun || 0; health.jobs = Math.max(health.jobs, s.lastReplies || 0); showHealth();
     $("intern-scan").textContent = `${s.matched ?? jobs.length} matches · scanned ${s.lastRun ? dayName(new Date(s.lastRun).toISOString()).toLowerCase() + " " + clock(new Date(s.lastRun).toISOString()) : "—"}`;
     $("intern-stats").innerHTML = [["To review", c.new], ["In progress", c.progress], ["Applied", c.applied], ["Interviews", c.interview]]
       .map(([k, v]) => `<div><b>${esc(v)}</b><i>${esc(k)}</i></div>`).join("");
@@ -766,7 +766,8 @@ if (/^[A-Za-z0-9_-]+$/.test(location.hash.slice(1))) {
 }
 // Coming back to the tab catches up at once
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { load(); loadMail(); loadIntern(); } });
-// Sync asks the backend for a fresh run (it watches the "-sync" side topic), then reloads once new data lands
+// Sync asks the backend for a fresh run (it watches the "-sync" side topic, and also starts the application status
+// check), then reloads once new data lands
 $("sync").addEventListener("click", async () => {
   const b = $("sync"), topic = location.hash.slice(1), done = (t) => {
     b.textContent = t; setTimeout(() => { b.textContent = "Sync"; b.disabled = false; }, 3000);
