@@ -77,6 +77,7 @@ async function save(env, path, { patch = {}, set = null, remove = false }) {
   throw new Error("Kept colliding with another change. Try again.");
 }
 
+const RESUME_PDF = "resume/Kyran_Lakhia_Resume.pdf";
 const IMAGE = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };
 
 export async function onRequest({ request, env, params }) {
@@ -118,6 +119,15 @@ export async function onRequest({ request, env, params }) {
       const ext = p.split(".").pop();
       const type = Object.keys(IMAGE).find((t) => IMAGE[t] === ext) || "application/octet-stream";
       return new Response(res.body, { headers: { "Content-Type": type, "Cache-Control": "private, max-age=86400" } });
+    }
+
+    // His master resume PDF, kept in the private store (resume/) so it is only reachable behind the site password
+    if (route === "resume" && request.method === "GET") {
+      const res = await gh(env).rest(`contents/${RESUME_PDF}`, { headers: { Accept: "application/vnd.github.raw+json" } });
+      if (!res.ok) return json({ error: "Your resume isn't in the store yet." }, 404);
+      const name = RESUME_PDF.split("/").pop();
+      return new Response(res.body, { headers: { "Content-Type": "application/pdf", "Cache-Control": "no-store",
+        "Content-Disposition": `${url.searchParams.has("dl") ? "attachment" : "inline"}; filename="${name}"` } });
     }
 
     // Wake Jarvis now instead of at its next scheduled run (the request itself is already saved)
