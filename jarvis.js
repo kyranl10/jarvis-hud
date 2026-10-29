@@ -41,7 +41,7 @@ const J = (() => {
 })();
 
 // On iPhone and iPad, Gmail web links open the Gmail app instead of Safari, where Google shows its sign-up page.
-// No timed fallback to the web link: Safari's "Open in Gmail?" prompt keeps the page visible, so a timer fired anyway.
+// The app opens to the inbox: it rejects every link format for a single email (tested Oct 29), so there's no email-specific link.
 (() => {
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   if (!ios) return;
@@ -49,11 +49,7 @@ const J = (() => {
     const a = e.target.closest && e.target.closest('a[href^="https://mail.google.com/"]');
     if (!a || e.defaultPrevented) return;
     e.preventDefault();
-    // Links end in #all/thread-f:<decimal id>; the app wants the same id in hex
-    const hash = new URL(a.href).hash, dec = hash.match(/thread-f:(\d+)/), hex = hash.match(/\/([0-9a-f]{16})$/i);
-    const thread = dec ? BigInt(dec[1]).toString(16) : hex ? hex[1] : "";
     // Pages run inside index.html's tab frames, and iOS ignores app links opened from a frame, so open it from the top page
-    const app = thread ? "googlegmail:///cv=" + thread : "googlegmail://";
-    try { window.top.location.href = app; } catch (err) { location.href = app; }
+    try { window.top.location.href = "googlegmail://"; } catch (err) { location.href = "googlegmail://"; }
   });
 })();
