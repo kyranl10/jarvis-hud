@@ -1,27 +1,31 @@
 {
- "updated": 1793281022923,
+ "updated": 1793284662228,
  "matched": 725,
  "counts": {
-  "new": 92,
-  "progress": 3,
-  "applied": 4,
+  "new": 90,
+  "progress": 2,
+  "applied": 7,
   "interview": 1,
-  "denied": 2
+  "denied": 3
  },
  "news": [
   {
    "status": "applied",
-   "at": 1793202084000
+   "at": 1793282943000
   },
   {
    "status": "applied",
-   "at": 1793137707000
+   "at": 1793281820000
+  },
+  {
+   "status": "applied",
+   "at": 1793202084000
   }
  ],
  "fresh": [
   {
    "company": "Nissan",
-   "title": "AI & Data Analytics Intern - Summer 2027 - Irving, TX or Franklin, TN",
+   "title": "Manufacturing Digital Data Intern - Summer 2027 - Decherd, TN",
    "posted": 1793188800000
   },
   {
