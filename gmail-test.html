@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Gmail link test</title>
+<style>
+body { margin: 0; padding: 16px; background: #05080c; color: #d8f6ff; font: 16px/1.4 "Segoe UI", Helvetica, Arial, sans-serif; }
+a { display: block; margin: 10px 0; padding: 14px; border: 1px solid #1d4a5a; border-radius: 10px; color: #5fe0ff; text-decoration: none; }
+code { display: block; font-size: 12px; color: #7d97a3; word-break: break-all; margin-top: 4px; }
+</style>
+</head>
+<body>
+<p>Temporary page to find which link format opens an email in the Gmail app. Tap each one and note which opens the email.</p>
+<div id="list"></div>
+<script>
+// The thread id comes from the page address (?t=hex id), so no mail id lives in this public repo
+const t = (new URLSearchParams(location.search).get("t") || "").replace(/[^0-9a-f]/gi, "");
+const dec = t ? BigInt("0x" + t).toString() : "";
+const tries = [
+  ["googlegmail:///cv=" + t + "/accountId=1"],
+  ["googlegmail:///cv=" + t + "/accountId=1&create-new-tab"],
+  ["googlegmail://cv=" + t],
+  ["googlegmail:///cv=thread-f:" + dec + "/accountId=1"],
+  ["googlegmail://mail.google.com/mail/u/0/#all/" + t],
+  ["googlegmail:///message?id=" + t],
+];
+document.getElementById("list").innerHTML = t ? tries.map(([u], i) =>
+  `<a href="${u.replace(/"/g, "&quot;")}">Option ${i + 1}<code>${u.replace(/</g, "&lt;")}</code></a>`).join("") : "<p>Missing ?t= in the address.</p>";
+</script>
+</body>
+</html>
