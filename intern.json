@@ -1,12 +1,12 @@
 {
- "updated": 1793323291289,
- "matched": 738,
+ "updated": 1793333358519,
+ "matched": 747,
  "counts": {
-  "new": 92,
+  "new": 96,
   "progress": 2,
   "applied": 19,
   "interview": 1,
-  "denied": 3
+  "denied": 1
  },
  "news": [
   {
@@ -24,19 +24,19 @@
  ],
  "fresh": [
   {
-   "company": "Nissan",
-   "title": "Manufacturing Digital Data Intern - Summer 2027 - Decherd, TN",
-   "posted": 1793188800000
+   "company": "RTX",
+   "title": "Sustainment Data and Analytics Intern",
+   "posted": 1793232000000
   },
   {
-   "company": "Federal Home Loan Bank of Indianapolis",
-   "title": "MPP Data Analytics Intern",
-   "posted": 1793145600000
+   "company": "Axiom Space",
+   "title": "Enterprise Data Analyst Intern - Power BI & Data Quality",
+   "posted": 1793232000000
   },
   {
-   "company": "Regeneron Pharmaceuticals",
-   "title": "Data Science & Digital Innovation Intern - Industrial Operations and Product Supply",
-   "posted": 1793145600000
+   "company": "Great American Insurance Company",
+   "title": "IT Data Intern",
+   "posted": 1793232000000
   }
  ]
 }
