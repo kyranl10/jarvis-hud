@@ -1,8 +1,8 @@
 {
- "updated": 1793333358519,
- "matched": 747,
+ "updated": 1793355353485,
+ "matched": 748,
  "counts": {
-  "new": 96,
+  "new": 97,
   "progress": 2,
   "applied": 19,
   "interview": 1,
@@ -24,6 +24,11 @@
  ],
  "fresh": [
   {
+   "company": "Stratolaunch",
+   "title": "Manufacturing Systems & Data Intern - Systems",
+   "posted": 1793334097000
+  },
+  {
    "company": "RTX",
    "title": "Sustainment Data and Analytics Intern",
    "posted": 1793232000000
@@ -31,11 +36,6 @@
   {
    "company": "Axiom Space",
    "title": "Enterprise Data Analyst Intern - Power BI & Data Quality",
-   "posted": 1793232000000
-  },
-  {
-   "company": "Great American Insurance Company",
-   "title": "IT Data Intern",
    "posted": 1793232000000
   }
  ]
