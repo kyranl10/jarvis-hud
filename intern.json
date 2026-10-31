@@ -1,8 +1,8 @@
 {
- "updated": 1793398103039,
- "matched": 755,
+ "updated": 1793419734394,
+ "matched": 760,
  "counts": {
-  "new": 97,
+  "new": 100,
   "progress": 2,
   "applied": 34,
   "interview": 1,
@@ -24,19 +24,19 @@
  ],
  "fresh": [
   {
-   "company": "Stratolaunch",
-   "title": "Manufacturing Systems & Data Intern - Systems",
-   "posted": 1793334097000
+   "company": "Molina Healthcare",
+   "title": "Customer Experience & Analytics Intern - Undergraduate",
+   "posted": 1793400655000
   },
   {
-   "company": "RTX",
-   "title": "Sustainment Data and Analytics Intern",
-   "posted": 1793232000000
+   "company": "Divergent Technologies",
+   "title": "Business Intelligence Intern",
+   "posted": 1793400143000
   },
   {
-   "company": "Axiom Space",
-   "title": "Enterprise Data Analyst Intern - Power BI & Data Quality",
-   "posted": 1793232000000
+   "company": "Strada Education Foundation",
+   "title": "Clear Outcomes and Data Science Intern",
+   "posted": 1793399607000
   }
  ]
 }
