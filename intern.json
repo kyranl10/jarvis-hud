@@ -1,8 +1,8 @@
 {
- "updated": 1793618062833,
- "matched": 767,
+ "updated": 1793641745081,
+ "matched": 776,
  "counts": {
-  "new": 90,
+  "new": 95,
   "progress": 2,
   "applied": 34,
   "interview": 1,
@@ -24,6 +24,11 @@
  ],
  "fresh": [
   {
+   "company": "ParetoHealth",
+   "title": "Analytics Intern",
+   "posted": 1793623163000
+  },
+  {
    "company": "Molina Healthcare",
    "title": "Customer Experience & Analytics Intern - Undergraduate",
    "posted": 1793400655000
@@ -32,11 +37,6 @@
    "company": "Divergent Technologies",
    "title": "Business Intelligence Intern",
    "posted": 1793400143000
-  },
-  {
-   "company": "Strada Education Foundation",
-   "title": "Clear Outcomes and Data Science Intern",
-   "posted": 1793399607000
   }
  ]
 }
