@@ -1,8 +1,8 @@
 {
- "updated": 1793665294063,
- "matched": 780,
+ "updated": 1793682626985,
+ "matched": 796,
  "counts": {
-  "new": 94,
+  "new": 98,
   "progress": 2,
   "applied": 34,
   "interview": 1,
@@ -16,19 +16,19 @@
  ],
  "fresh": [
   {
+   "company": "Paccar",
+   "title": "Sales Administration Data Analyst Intern - Greenhouse Gas",
+   "posted": 1793660697000
+  },
+  {
+   "company": "Toshiba Global Commerce Solutions",
+   "title": "AI Data Science & Business Analytics Intern",
+   "posted": 1793640515000
+  },
+  {
    "company": "ParetoHealth",
    "title": "Analytics Intern",
    "posted": 1793623163000
-  },
-  {
-   "company": "Molina Healthcare",
-   "title": "Customer Experience & Analytics Intern - Undergraduate",
-   "posted": 1793400655000
-  },
-  {
-   "company": "Divergent Technologies",
-   "title": "Business Intelligence Intern",
-   "posted": 1793400143000
   }
  ]
 }
