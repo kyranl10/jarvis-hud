@@ -1,19 +1,14 @@
 {
- "updated": 1794092898130,
- "matched": 867,
+ "updated": 1794157691433,
+ "matched": 873,
  "counts": {
-  "new": 97,
+  "new": 102,
   "progress": 1,
   "applied": 35,
   "interview": 2,
   "denied": 0
  },
- "news": [
-  {
-   "status": "interview",
-   "at": 1793898480000
-  }
- ],
+ "news": [],
  "fresh": [
   {
    "company": "Paccar",
