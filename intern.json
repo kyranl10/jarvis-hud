@@ -1,6 +1,6 @@
 {
- "updated": 1794222824940,
- "matched": 874,
+ "updated": 1794244191578,
+ "matched": 881,
  "counts": {
   "new": 93,
   "progress": 1,
@@ -11,6 +11,11 @@
  "news": [],
  "fresh": [
   {
+   "company": "Enova",
+   "title": "Analytics Intern",
+   "posted": 1794239236000
+  },
+  {
    "company": "Paccar",
    "title": "Sales Administration Data Analyst Intern - Greenhouse Gas",
    "posted": 1793660697000
@@ -19,11 +24,6 @@
    "company": "Toshiba Global Commerce Solutions",
    "title": "AI Data Science & Business Analytics Intern",
    "posted": 1793640515000
-  },
-  {
-   "company": "ParetoHealth",
-   "title": "Analytics Intern",
-   "posted": 1793623163000
   }
  ]
 }
