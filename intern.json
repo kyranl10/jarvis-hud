@@ -1,8 +1,8 @@
 {
- "updated": 1794265770632,
- "matched": 889,
+ "updated": 1794287325912,
+ "matched": 898,
  "counts": {
-  "new": 90,
+  "new": 88,
   "progress": 1,
   "applied": 35,
   "interview": 2,
@@ -11,9 +11,19 @@
  "news": [],
  "fresh": [
   {
+   "company": "Paccar",
+   "title": "Greenhouse Gas Data Analyst Intern",
+   "posted": 1794266887000
+  },
+  {
    "company": "Enova",
    "title": "Analytics Intern",
    "posted": 1794239236000
+  },
+  {
+   "company": "DreamWorks Animation",
+   "title": "Studio Operations \u2013 Data Analytics Intern",
+   "posted": 1794238457000
   }
  ]
 }
