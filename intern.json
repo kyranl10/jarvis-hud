@@ -1,5 +1,5 @@
 {
- "updated": 1794762460908,
+ "updated": 1794766870452,
  "matched": 989,
  "counts": {
   "new": 115,
@@ -8,12 +8,7 @@
   "interview": 2,
   "denied": 0
  },
- "news": [
-  {
-   "status": "rejected",
-   "at": 1794507598000
-  }
- ],
+ "news": [],
  "fresh": [
   {
    "company": "DwyerOmega",
