@@ -1,8 +1,8 @@
 {
- "updated": 1794842461674,
- "matched": 989,
+ "updated": 1794848896928,
+ "matched": 998,
  "counts": {
-  "new": 109,
+  "new": 107,
   "progress": 1,
   "applied": 37,
   "interview": 3,
@@ -28,11 +28,6 @@
    "company": "Paccar",
    "title": "Greenhouse Gas Data Analyst Intern",
    "posted": 1794266887000
-  },
-  {
-   "company": "Enova",
-   "title": "Analytics Intern",
-   "posted": 1794239236000
   }
  ]
 }
