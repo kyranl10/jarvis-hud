@@ -1,14 +1,18 @@
 {
- "updated": 1794838858564,
+ "updated": 1794842461674,
  "matched": 989,
  "counts": {
-  "new": 110,
+  "new": 109,
   "progress": 1,
-  "applied": 36,
+  "applied": 37,
   "interview": 3,
   "denied": 0
  },
  "news": [
+  {
+   "status": "applied",
+   "at": 1794839045000
+  },
   {
    "status": "interview",
    "at": 1794838789000
