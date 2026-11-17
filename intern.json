@@ -1,8 +1,8 @@
 {
- "updated": 1794870477971,
- "matched": 1000,
+ "updated": 1794892071189,
+ "matched": 1005,
  "counts": {
-  "new": 100,
+  "new": 98,
   "progress": 1,
   "applied": 37,
   "interview": 3,
@@ -27,11 +27,6 @@
    "company": "DwyerOmega",
    "title": "Applied AI Intern",
    "posted": 1794354354000
-  },
-  {
-   "company": "Paccar",
-   "title": "Greenhouse Gas Data Analyst Intern",
-   "posted": 1794266887000
   }
  ]
 }
