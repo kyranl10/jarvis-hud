@@ -1,8 +1,8 @@
 {
- "updated": 1794956884036,
- "matched": 1017,
+ "updated": 1794978488490,
+ "matched": 1023,
  "counts": {
-  "new": 101,
+  "new": 99,
   "progress": 1,
   "applied": 37,
   "interview": 3,
@@ -22,11 +22,5 @@
    "at": 1794838789000
   }
  ],
- "fresh": [
-  {
-   "company": "DwyerOmega",
-   "title": "Applied AI Intern",
-   "posted": 1794354354000
-  }
- ]
+ "fresh": []
 }
